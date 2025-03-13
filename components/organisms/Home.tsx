@@ -81,7 +81,7 @@ export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
         name: roomName,
         nftId: (await mintLuksoNFT(roomName, isPublic)) ?? 1,
         isPublic: true,
-        creator_id: accounts[0] ?? "0xxx",
+        creator_id: accounts[0],
       });
 
       // 1. Placeholder for LUKSO NFT minting
@@ -96,7 +96,7 @@ export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
         name: roomName,
         nftId: Number(nftId),
         isPublic: isPublic,
-        creator_id: accounts[0] ?? "0xxx",
+        creator_id: accounts[0],
       });
 
       console.log("Room created:", room);

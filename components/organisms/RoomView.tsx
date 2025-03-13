@@ -206,7 +206,7 @@ export const RoomView = ({ slug }: { slug: any }) => {
         {/* Content */}
         <div className="p-6">
           {/* /ToDO: change to account address for host */}
-          {!isJoined && room.creator_id !== "0xxx" ? (
+          {!isJoined && room.creator_id !== accounts[0] ? (
             <div className="flex flex-col items-center py-8">
               <p className="mb-4 text-gray-300">
                 Join this room to listen together
@@ -265,7 +265,7 @@ export const RoomView = ({ slug }: { slug: any }) => {
 
                 {/* Controls */}
                 {isJoined ||
-                  (room.creator_id === "0xxx" && (
+                  (room.creator_id === accounts[0] && (
                     <div>
                       {/* Progress bar */}
                       <div className="w-full h-2 bg-gray-700 rounded-full mb-4">
