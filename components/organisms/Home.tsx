@@ -283,7 +283,7 @@ export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-400">
-                  <p>You haven't created any rooms yet.</p>
+                  <p>You haven&apos;t created any rooms yet.</p>
                   <button
                     className="mt-4 px-4 py-2 bg-red-600/80 hover:bg-red-700/90 text-white rounded-lg"
                     onClick={() => {

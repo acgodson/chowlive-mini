@@ -63,7 +63,7 @@ export default class LuksoRpc {
   }
 
   // Get static clients
-  static getPublicClient(provider: any) {
+  static getPublicClient() {
     return createPublicClient({
       chain: luksoMainnet,
       transport: http(),
