@@ -37,7 +37,7 @@ export const spotifyAuth = {
       )}&origin=${encodeURIComponent(window.location.origin)}`;
 
       // Use top-level navigation (parent window) to avoid iframe restrictions
-      //@ts-ignore
+      // @ts-expect-error
       window.top.location.href = spotifyAuthUrl;
     } catch (error) {
       console.error("Error initiating Spotify auth:", error);
@@ -51,6 +51,7 @@ export const spotifyAuth = {
    * @param firebaseProjectId Firebase project ID for cloud functions
    */
   async processCallback({ provider, firebaseProjectId }: SpotifyAuthProps) {
+    console.log(provider);
     try {
       // Get URL parameters
       const urlParams = new URLSearchParams(window.location.search);

@@ -3,10 +3,10 @@ import { useAtom } from "jotai";
 import PlaybackAPI from "@/lib/playback";
 import Song from "@/components/models/Song";
 import { playbackConfigurationAtom } from "@/components/state/playbackConfigurationAtom";
-import useStore from "@/components/state/store";
+// import useStore from "@/components/state/store";
 import useSongProgress from "./useSongProgress";
 import { getDatabase, ref, get } from "firebase/database";
-import { useUpProvider } from "./upProvider";
+// import { useUpProvider } from "./upProvider";
 import { PLAYBACK_STATE } from "@/lib/playback/getPlaybackStatus";
 import { signInWithCustomToken, getAuth } from "firebase/auth";
 import { useSpotify } from "./state/spotifyContext";
@@ -15,7 +15,7 @@ export default function useHandlePlayback(
   song?: Song,
   onProgressUpdate?: (progress: number) => void
 ) {
-  const { accounts } = useUpProvider();
+  // const { accounts } = useUpProvider();
   const [user, setUser] = useState<any>(null);
   const { spotify } = useSpotify();
 

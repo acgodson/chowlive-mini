@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { spotifyAuth } from "./spotifyAuth";
 import { useUpProvider } from "./upProvider";
 import { FIREBASE_CONFIG } from "@/configs/firebase-app-config";
-import { useAuthMessageListener } from "./useAuthMessageListener";
+// import { useAuthMessageListener } from "./useAuthMessageListener";
 import { signInWithCustomToken } from "firebase/auth";
 import { getFirebaseAuth } from "../configs/firebase-app-config";
 
@@ -54,14 +54,14 @@ export function useSpotifyAuth() {
     return () => unsubscribe();
   }, []);
 
-  const handleAuthSuccess = useCallback(
-    ({ firebaseToken, spotifyToken }: any) => {
-      if (firebaseToken && spotifyToken) {
-        setIsAuthenticated(true);
-      }
-    },
-    []
-  );
+  // const handleAuthSuccess = useCallback(
+  //   ({ firebaseToken, spotifyToken }: any) => {
+  //     if (firebaseToken && spotifyToken) {
+  //       setIsAuthenticated(true);
+  //     }
+  //   },
+  //   []
+  // );
 
   const connect = async () => {
     try {

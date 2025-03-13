@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { FIREBASE_CONFIG } from "@/configs/firebase-app-config";
 
 export default function SpotifyCallback() {
-  const router = useRouter();
+
   const [message, setMessage] = useState(
     "Processing Spotify authentication..."
   );

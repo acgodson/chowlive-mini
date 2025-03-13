@@ -5,8 +5,8 @@ import { joinRoom } from "../RoomRoll/";
 import { useUpProvider } from "../upProvider";
 import useMonitorRoom from "../useMonitorRoom";
 import { trpc } from "@/trpc/client";
-import { playbackConfigurationAtom } from "../state/playbackConfigurationAtom";
-import { useAtom } from "jotai";
+// import { playbackConfigurationAtom } from "../state/playbackConfigurationAtom";
+// import { useAtom } from "jotai";
 import useQueue from "../useQueue";
 import useHandlePlayback from "../useHandlePlayback";
 import useSpotifyTrack from "../useSpotifyTrack";
@@ -19,31 +19,28 @@ export const RoomView = ({ slug }: { slug: any }) => {
   const song = queue ? queue[0] || undefined : undefined;
   const [progress, setProgress] = useState(0);
   const memoizedSong = useMemo(() => song, [song?.id]);
-  const { user } = useHandlePlayback(memoizedSong, setProgress);
+  const {} = useHandlePlayback(memoizedSong, setProgress);
 
   const { accounts } = useUpProvider();
 
-  const track = useSpotifyTrack(song);
-
-  const isSongInQueue = !!track && !!song;
+  const currentTrack = useSpotifyTrack(song);
+  // const isSongInQueue = !!track && !!song;
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isJoined, setIsJoined] = useState(false);
-  const [isCreator] = useState(false);
+  // const [isCreator] = useState(false);
   const {
-    isAuthenticated,
+    // isAuthenticated,
     isLoading: isLoadingSpotify,
-    connect,
+    // connect,
   } = useSpotifyAuth();
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [isSkippingSong, setIsSkippingSong] = useState(false);
 
-  const [playbackConfiguration, setPlaybackConfiguration] = useAtom(
-    playbackConfigurationAtom
-  );
-
-  const [currentTrack, setCurrentTrack] = useState<any>(null);
+  // const [playbackConfiguration, setPlaybackConfiguration] = useAtom(
+  //   playbackConfigurationAtom
+  // );
 
   const roomId = slug;
 
@@ -54,6 +51,7 @@ export const RoomView = ({ slug }: { slug: any }) => {
 
   useEffect(() => {
     setChangeToIsPaused(isPaused);
+    console.log(changeToIsPaused);
   }, [isPaused]);
 
   const onBack = () => {
@@ -78,11 +76,11 @@ export const RoomView = ({ slug }: { slug: any }) => {
     }
   };
 
-  const handleTogglePlaybackConfiguration = () =>
-    setPlaybackConfiguration({
-      ...playbackConfiguration,
-      linked: !playbackConfiguration.linked,
-    });
+  // const handleTogglePlaybackConfiguration = () =>
+  //   setPlaybackConfiguration({
+  //     ...playbackConfiguration,
+  //     linked: !playbackConfiguration.linked,
+  //   });
 
   const handleSkipForward = async () => {
     if (!song) return;
@@ -214,6 +212,7 @@ export const RoomView = ({ slug }: { slug: any }) => {
                 Join this room to listen together
               </p>
               <button
+                disabled={isLoading}
                 onClick={handleJoin}
                 className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-medium transition duration-200"
               >
@@ -302,6 +301,7 @@ export const RoomView = ({ slug }: { slug: any }) => {
                             )}
                           </button>
                           <button
+                            disabled={isSkippingSong}
                             onClick={handleSkipForward}
                             className="p-3 rounded-full hover:bg-gray-800 transition-colors"
                           >

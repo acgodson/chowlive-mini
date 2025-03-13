@@ -13,7 +13,7 @@ interface HomeProps {
 
 export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
   const router = useRouter();
-  const { accounts, walletConnected } = useUpProvider();
+  const { accounts } = useUpProvider();
   const [roomIdInput, setRoomIdInput] = useState("");
   const [showRoomIdFromUrl, setShowRoomIdFromUrl] = useState(false);
   const [roomIdFromUrl, setRoomIdFromUrl] = useState("");

@@ -10,7 +10,7 @@ import React, {
 import { get, ref, getDatabase } from "firebase/database";
 import { onAuthStateChanged } from "firebase/auth";
 import {
-  getFirebaseApp,
+  // getFirebaseApp,
   getFirebaseAuth,
 } from "../../configs/firebase-app-config";
 
@@ -19,7 +19,7 @@ const SPOTIFY_PLAYER_SCRIPT_SRC = "https://sdk.scdn.co/spotify-player.js";
 interface SpotifyWebPlaybackContextType {
   isWebPlaybackReady: boolean;
   accessToken: string | null;
-  //@ts-ignore
+  // @ts-expect-error
   spotifyPlayer: Spotify.Player | null;
 }
 
@@ -83,7 +83,7 @@ export const SpotifyWebPlaybackProvider: React.FC<PropsWithChildren> = ({
 
   // Listen for Firebase auth state changes
   useEffect(() => {
-    const app = getFirebaseApp();
+    // const app = getFirebaseApp();
     const auth = getFirebaseAuth();
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -145,7 +145,7 @@ export const SpotifyWebPlaybackProvider: React.FC<PropsWithChildren> = ({
 
     console.log("Creating Spotify Web Player...");
 
-    // @ts-ignore - Spotify will be defined by the SDK
+    // @ts-expect-error
     const player = new Spotify.Player({
       name: "LUKSO Music Rooms",
       getOAuthToken: (cb: (token: string) => void) => {

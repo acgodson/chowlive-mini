@@ -8,18 +8,23 @@ import {
   encodeFunctionData,
   http,
   PublicClient,
-} from 'viem';
-import { sepolia, avalancheFuji, baseSepolia, optimismSepolia } from 'viem/chains';
+} from "viem";
+import {
+  sepolia,
+  avalancheFuji,
+  baseSepolia,
+  optimismSepolia,
+} from "viem/chains";
 import {
   createBundlerClient,
   toCoinbaseSmartAccount,
   createPaymasterClient,
-} from 'viem/account-abstraction';
-import { privateKeyToAccount } from 'viem/accounts';
-import chowliveRoomABI from '@/utils/helpers/abis/ChowliveRoom.json';
+} from "viem/account-abstraction";
+import { privateKeyToAccount } from "viem/accounts";
+import chowliveRoomABI from "@/utils/helpers/abis/ChowliveRoom.json";
 
-import type { IProvider } from '@web3auth/base';
-import { parseCreateRoomEvents } from '@/utils';
+import type { IProvider } from "@web3auth/base";
+import { parseCreateRoomEvents } from "@/utils";
 
 export default class EthereumRpc {
   private provider: IProvider;
@@ -29,10 +34,10 @@ export default class EthereumRpc {
   constructor(provider: IProvider) {
     this.provider = provider;
     this.chainConfigs = {
-      '0x14a33': baseSepolia,
-      '0xaa36a7': sepolia,
-      '0xaa37dc': optimismSepolia,
-      '0xa869': avalancheFuji,
+      "0x14a33": baseSepolia,
+      "0xaa36a7": sepolia,
+      "0xaa37dc": optimismSepolia,
+      "0xa869": avalancheFuji,
     };
     this.publicClient = createPublicClient({
       chain: this.getViewChain(),
@@ -50,7 +55,7 @@ export default class EthereumRpc {
       const chainId = await this.publicClient.getChainId();
       return `0x${chainId.toString(16)}`;
     } catch (error) {
-      console.error('Error getting chain ID:', error);
+      console.error("Error getting chain ID:", error);
       throw error;
     }
   }
@@ -71,7 +76,7 @@ export default class EthereumRpc {
       const account = await this.getSmartAccount();
       return account.address;
     } catch (error) {
-      console.error('Error getting addresses:', error);
+      console.error("Error getting addresses:", error);
       return undefined;
     }
   }
@@ -86,7 +91,7 @@ export default class EthereumRpc {
   async getPrivateKey(): Promise<any> {
     try {
       const privateKey = await this.provider.request({
-        method: 'eth_private_key',
+        method: "eth_private_key",
       });
       return privateKey;
     } catch (error) {
@@ -98,8 +103,8 @@ export default class EthereumRpc {
     try {
       const address = await this.getAccounts();
       if (!address) {
-        console.log('no account yet for balance retrieval');
-        return '0';
+        console.log("no account yet for balance retrieval");
+        return "0";
       }
       this.publicClient = createPublicClient({
         chain: this.getViewChain(),
@@ -134,15 +139,18 @@ export default class EthereumRpc {
         ),
       });
 
-      const contractAddress = process.env.NEXT_PUBLIC_CHOWLIVE_ROOM as `0x${string}`;
+      const contractAddress = process.env
+        .NEXT_PUBLIC_CHOWLIVE_ROOM as `0x${string}`;
 
       const data = encodeFunctionData({
         abi: chowliveRoomABI.abi,
-        functionName: 'createRoom',
+        functionName: "createRoom",
         args: [
           isPublic,
           !isPublic ? 0 : subscriptionFee,
-          !isPublic ? '0x0000000000000000000000000000000000000000' : tokenAddress,
+          !isPublic
+            ? "0x0000000000000000000000000000000000000000"
+            : tokenAddress,
         ],
       });
       const userOpHash = await bundlerClient.sendUserOperation({
@@ -151,16 +159,18 @@ export default class EthereumRpc {
           {
             to: contractAddress,
             data,
-            value: parseEther('0'),
+            value: parseEther("0"),
           },
         ],
       });
-      console.log('UserOp Hash:', userOpHash);
-      const transactionH = await bundlerClient.waitForUserOperationReceipt({ hash: userOpHash });
+      console.log("UserOp Hash:", userOpHash);
+      const transactionH = await bundlerClient.waitForUserOperationReceipt({
+        hash: userOpHash,
+      });
       const x = await parseCreateRoomEvents(transactionH.receipt);
       return { hash: x?.hash, roomId: x?.roomId as any };
     } catch (error) {
-      console.error('Error creating room:', error);
+      console.error("Error creating room:", error);
       throw error;
     }
   }
@@ -171,6 +181,7 @@ export default class EthereumRpc {
     subscriptionFee: any
   ): Promise<string | undefined> {
     try {
+      console.log(subscriptionFee);
       const chain = isBased ? baseSepolia : sepolia;
       const account = await this.getSmartAccount();
 
@@ -178,14 +189,14 @@ export default class EthereumRpc {
         ? process.env.NEXT_PUBLIC_CHOWLIVE_ROOM
         : process.env.NEXT_PUBLIC_CHOWLIVE_ROUTER;
 
-      if (!contractAddress) throw new Error('Contract address not found');
+      if (!contractAddress) throw new Error("Contract address not found");
 
       //Note: If subscription fee is > 0 grant erc20 approval permision.
       // for client demo subscription fees are always set at 0
 
       const data = encodeFunctionData({
         abi: chowliveRoomABI.abi,
-        functionName: isBased ? 'subscribeToRoom' : 'subscribeToCrossChainRoom',
+        functionName: isBased ? "subscribeToRoom" : "subscribeToCrossChainRoom",
         args: isBased ? [account.address, nftId] : [account.address, nftId],
       });
 
@@ -193,7 +204,7 @@ export default class EthereumRpc {
         // Gasless transaction for BaseSepolia
         const paymasterClient = createPaymasterClient({
           transport: http(
-            'https://api.developer.coinbase.com/rpc/v1/base-sepolia/ETbUiI4nKwRzdh60GHlCC3GdBSXOai5n'
+            "https://api.developer.coinbase.com/rpc/v1/base-sepolia/ETbUiI4nKwRzdh60GHlCC3GdBSXOai5n"
           ),
         });
 
@@ -201,7 +212,7 @@ export default class EthereumRpc {
           chain: baseSepolia,
           paymaster: paymasterClient,
           transport: http(
-            'https://api.developer.coinbase.com/rpc/v1/base-sepolia/ETbUiI4nKwRzdh60GHlCC3GdBSXOai5n'
+            "https://api.developer.coinbase.com/rpc/v1/base-sepolia/ETbUiI4nKwRzdh60GHlCC3GdBSXOai5n"
           ),
         });
 
@@ -215,12 +226,14 @@ export default class EthereumRpc {
           ],
         });
 
-        console.log('UserOp Hash:', userOpHash);
+        console.log("UserOp Hash:", userOpHash);
 
-        const transactionHash = await bundlerClient.waitForUserOperationReceipt({
-          hash: userOpHash,
-        });
-        console.log('Transaction Hash:', transactionHash);
+        const transactionHash = await bundlerClient.waitForUserOperationReceipt(
+          {
+            hash: userOpHash,
+          }
+        );
+        console.log("Transaction Hash:", transactionHash);
 
         return transactionHash.userOpHash;
       } else {
@@ -242,16 +255,18 @@ export default class EthereumRpc {
           ],
         });
 
-        console.log('UserOp Hash:', userOpHash);
+        console.log("UserOp Hash:", userOpHash);
 
-        const transactionHash = await bundlerClient.waitForUserOperationReceipt({
-          hash: userOpHash,
-        });
-        console.log('Transaction Hash:', transactionHash);
+        const transactionHash = await bundlerClient.waitForUserOperationReceipt(
+          {
+            hash: userOpHash,
+          }
+        );
+        console.log("Transaction Hash:", transactionHash);
         return transactionHash.userOpHash;
       }
     } catch (error) {
-      console.error('Error subscribing:', error);
+      console.error("Error subscribing:", error);
       throw error;
     }
   }

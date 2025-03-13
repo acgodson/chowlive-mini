@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { getDatabase, get, ref } from "firebase/database";
 import Song from "@/components/models/Song";
-import { useUpProvider } from "./upProvider";
+// import { useUpProvider } from "./upProvider";
 import { signInWithCustomToken, getAuth } from "firebase/auth";
 import { useSpotify } from "./state/spotifyContext";
 
 const useSpotifyTrack = (song?: Song) => {
   const { spotify } = useSpotify();
 
-  const { accounts } = useUpProvider();
+  // const { accounts } = useUpProvider();
   const [spotifyTrack, setSpotifyTrack] =
     useState<SpotifyApi.SingleTrackResponse>();
   const [previousSongID, setPreviousSongID] = useState("");

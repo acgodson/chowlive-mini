@@ -42,7 +42,7 @@ const useSongs = (roomID: string) => {
     });
 
     return () => unsubscribe();
-  }, [roomID]);
+  }, [roomID, db]);
 
   const array = useMemo(() => Object.values(dictionary), [dictionary]);
 
