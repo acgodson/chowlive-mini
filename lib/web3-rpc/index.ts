@@ -40,8 +40,10 @@ export default class LuksoRpc {
   private walletClient: WalletClient;
 
   constructor(provider: any) {
+    if (!provider?.accounts[0]) {
+      throw new Error("No account connected");
+    }
     this.provider = provider;
-
     // Create public client for read operations
     this.publicClient = createPublicClient({
       chain: luksoMainnet,
@@ -87,9 +89,7 @@ export default class LuksoRpc {
 
   async getAccounts(): Promise<string[]> {
     try {
-      const accounts = await this.provider.request({
-        method: "eth_accounts",
-      });
+      const accounts = await this.provider.accounts;
       return accounts as string[];
     } catch (error) {
       console.error("Error getting accounts:", error);
@@ -237,11 +237,12 @@ export default class LuksoRpc {
     }
   }
 
-  async cancelSubscription(
-    roomId: number,
-    account: `0x${string}`
-  ): Promise<string> {
+  async cancelSubscription(roomId: number): Promise<string> {
     try {
+      const accounts = await this.getAccounts();
+      if (!accounts || accounts.length === 0) {
+        throw new Error("No accounts available");
+      }
       const contractAddress = process.env
         .NEXT_PUBLIC_CHOWLIVE_ROOM as `0x${string}`;
       if (!contractAddress) {
@@ -254,7 +255,7 @@ export default class LuksoRpc {
         functionName: "cancelSubscription",
         args: [BigInt(roomId)],
         chain: luksoMainnet,
-        account,
+        account: accounts[0] as `0x${string}`,
       });
 
       console.log("Cancel subscription transaction hash:", hash);
