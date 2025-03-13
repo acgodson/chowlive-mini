@@ -9,6 +9,7 @@ import LuksoRpc from "@/lib/web3-rpc";
 
 interface HomeProps {
   onJoinRoom: (roomId: string) => void;
+  //TODO: add other props
 }
 
 interface Room {
