@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "@/styles/globals.scss";
 import { UpProvider } from "@/components/upProvider";
+import AuroraBackground from "@/components/atoms/aurora-background";
 
 export const metadata: Metadata = {
   title: "Chowlive MiniApp",
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning={true}>
       <body suppressHydrationWarning={true}>
-        <UpProvider>{children}</UpProvider>
+        <UpProvider>
+          <AuroraBackground>{children}</AuroraBackground>
+        </UpProvider>
       </body>
     </html>
   );

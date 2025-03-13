@@ -176,7 +176,7 @@ export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
 
   return (
     <div className="w-full max-w-md mx-auto px-4 py-4 h-full flex flex-col">
-      <div className="overflow-hidden rounded-2xl shadow-xl flex-grow flex flex-col max-h-[95vh]">
+      <div className="overflow-hidden rounded-2xl shadow-xl flex-grow flex flex-col max-h-[95vh] bg-white/90">
         {/* Background Image with Header - Reduced height */}
         <div
           className="relative"
@@ -253,7 +253,7 @@ export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
 
               {isLoadingRooms ? (
                 <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-red-500"></div>
                 </div>
               ) : myRooms && myRooms.length > 0 ? (
                 <div className="space-y-3">
@@ -285,7 +285,7 @@ export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
                 <div className="text-center py-8 text-gray-400">
                   <p>You haven't created any rooms yet.</p>
                   <button
-                    className="mt-4 px-4 py-2 bg-blue-600/80 hover:bg-blue-700/90 text-white rounded-lg"
+                    className="mt-4 px-4 py-2 bg-red-600/80 hover:bg-red-700/90 text-white rounded-lg"
                     onClick={() => {
                       setShowSwitcher(false);
                       setShowCreateForm(true);
@@ -348,7 +348,7 @@ export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
                         />
                       </div>
                       <button
-                        className="w-full bg-blue-600/80 hover:bg-blue-700/90 backdrop-blur-sm text-white py-3 px-4 rounded-lg font-medium transition duration-200"
+                        className="w-full bg-red-600/80 hover:bg-red-700/90 backdrop-blur-sm text-white py-3 px-4 rounded-lg font-medium transition duration-200"
                         onClick={() => handleJoinRoom()}
                         disabled={!roomIdInput.trim()}
                       >
@@ -375,7 +375,7 @@ export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
                   {/* If room ID is in URL, show only join button */}
                   {showRoomIdFromUrl && (
                     <button
-                      className="w-full bg-blue-600/80 hover:bg-blue-700/90 backdrop-blur-sm text-white py-3 px-4 rounded-lg font-medium transition duration-200"
+                      className="w-full bg-blue-red/80 hover:bg-red-700/90 backdrop-blur-sm text-white py-3 px-4 rounded-lg font-medium transition duration-200"
                       onClick={() => handleJoinRoom()}
                     >
                       Join Room
@@ -441,7 +441,7 @@ export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
                     </button>
                     <button
                       type="button"
-                      className="flex-1 bg-blue-600/80 hover:bg-blue-700/90 backdrop-blur-sm text-white py-3 px-4 rounded-lg font-medium transition duration-200"
+                      className="flex-1 bg-blue-red/80 hover:bg-red-700/90 backdrop-blur-sm text-white py-3 px-4 rounded-lg font-medium transition duration-200"
                       onClick={handleCreateRoom}
                       disabled={isCreatingRoom || !roomName.trim()}
                     >
