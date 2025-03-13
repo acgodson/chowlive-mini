@@ -87,6 +87,11 @@ export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
       return;
     }
 
+    if (!isAuthenticated || !provider?.accounts[0] || !provider) {
+      setError("Please connect spotify and UP");
+      return;
+    }
+
     setIsCreatingRoom(true);
     setError(null);
 
@@ -114,7 +119,7 @@ export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
         name: roomName,
         nftId: Number(roomId),
         isPublic: isPublic,
-        creator_id: accounts[0],
+        creator_id: accounts[0] ?? provider?.accounts[0],
       });
 
       console.log("Room created:", room);

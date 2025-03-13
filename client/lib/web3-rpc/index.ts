@@ -47,7 +47,7 @@ export default class LuksoRpc {
     // Create public client for read operations
     this.publicClient = createPublicClient({
       chain: luksoMainnet,
-      transport: custom(provider),
+      transport: http(),
     });
 
     // Create wallet client for write operations
@@ -130,11 +130,15 @@ export default class LuksoRpc {
         throw new Error("Contract address not found");
       }
 
+      console.log("contract address", contractAddress);
+
       // Get the room creation fee from the contract
       const roomCreationFee = await this.publicClient.readContract({
         address: contractAddress,
         abi: chowliveRoomABI.abi,
         functionName: "roomCreationFee",
+        account: this.provider.accounts[0],
+        args: [],
       });
 
       console.log("Room creation fee:", roomCreationFee);
@@ -152,36 +156,69 @@ export default class LuksoRpc {
 
       console.log("Transaction hash:", hash);
 
-      // Wait for transaction receipt
       const receipt = await this.publicClient.waitForTransactionReceipt({
         hash,
       });
+      console.log("receipt", receipt);
 
-      // Parse event logs to get roomId
-      const roomCreatedEvent = receipt.logs
-        .map((log) => {
-          try {
-            return {
-              ...log,
-              ...decodeEventLog({
-                abi: chowliveRoomABI.abi,
-                data: log.data,
-                topics: log.topics,
-              }),
-            };
-          } catch {
-            return null;
+      console.log("Receipt logs:", receipt.logs);
+
+      // More robust event parsing approach
+      let roomId: bigint | undefined;
+
+      // First attempt: Try to decode each log
+      for (const log of receipt.logs) {
+        try {
+          // If the log is from our contract address
+          if (log.address.toLowerCase() === contractAddress.toLowerCase()) {
+            const decodedLog = decodeEventLog({
+              abi: chowliveRoomABI.abi,
+              data: log.data,
+              topics: log.topics,
+            });
+
+            console.log(decodedLog);
+
+            if (decodedLog.eventName === "RoomCreated") {
+              console.log("Found RoomCreated event:", decodedLog);
+              // The roomId is the first indexed parameter (args[0])
+              roomId = decodedLog.args?.[0] as bigint;
+              break;
+            }
           }
-        })
-        .find((event) => event && event.eventName === "RoomCreated");
+        } catch (error) {
+          // Continue to next log if this one can't be decoded
+          console.log("Failed to decode log:", error);
+          continue;
+        }
+      }
 
-      if (!roomCreatedEvent || !roomCreatedEvent.args) {
-        throw new Error("Failed to get room ID from event logs");
+      if (!roomId) {
+        console.log(
+          "Couldn't find roomId in events, trying to read lastRoomID from contract"
+        );
+        try {
+          roomId = (await this.publicClient.readContract({
+            address: contractAddress,
+            abi: chowliveRoomABI.abi,
+            functionName: "lastRoomID",
+            args: [],
+          })) as bigint;
+
+          console.log("Read lastRoomID from contract:", roomId);
+        } catch (lastIdError) {
+          console.error("Error reading lastRoomID:", lastIdError);
+          throw new Error("Failed to get room ID from event logs or contract");
+        }
+      }
+
+      if (!roomId) {
+        throw new Error("Failed to get room ID from event logs or contract");
       }
 
       return {
         hash,
-        roomId: roomCreatedEvent.args[0] as bigint,
+        roomId,
       };
     } catch (error) {
       console.error("Error creating room:", error);
