@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Cookie Bridge</title>
+    <script>
+      (function () {
+        // Parse URL parameters
+        const params = new URLSearchParams(window.location.search);
+        const firebaseToken = params.get("firebase_token");
+        const spotifyToken = params.get("spotify_token");
+
+        // Set cookies if tokens are present
+        if (firebaseToken) {
+          document.cookie = `firebase_auth_token=${firebaseToken};path=/;max-age=2592000;samesite=none;secure`;
+        }
+
+        if (spotifyToken) {
+          document.cookie = `spotify_token=${spotifyToken};path=/;max-age=2592000;samesite=none;secure`;
+        }
+
+        // Notify parent window
+        window.parent.postMessage(
+          {
+            type: "COOKIES_SET",
+            success: true,
+          },
+          "*"
+        );
+      })();
+    </script>
+  </head>
+  <body>
+    <p>Setting cookies for bridge domain...</p>
+  </body>
+</html>
