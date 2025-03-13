@@ -64,6 +64,7 @@ export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
   // Placeholder function for LUKSO NFT minting
   const mintLuksoNFT = async (name: string, isPublic: boolean) => {
     console.log("Placeholder for minting LUKSO NFT", { name, isPublic });
+    
     return Math.floor(Math.random() * 10000) + 1; // Random ID between 1 and 10000
   };
 
