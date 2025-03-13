@@ -10,7 +10,7 @@ import {
   type WalletClient,
 } from "viem";
 import { createClientUPProvider } from "@lukso/up-provider";
-import chowliveRoomABI from "@/contracts/contracts/artifacts/ChowliveRoom.json";
+import chowliveRoomABI from "./ChowliveRoom.json";
 
 // Define LUKSO mainnet chain
 export const luksoMainnet = defineChain({
