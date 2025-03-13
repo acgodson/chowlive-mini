@@ -4,17 +4,18 @@ import { useEffect, useState } from "react";
 import { FIREBASE_CONFIG } from "@/configs/firebase-app-config";
 
 export default function SpotifyCallback() {
-
   const [message, setMessage] = useState(
     "Processing Spotify authentication..."
   );
+  const [isComplete, setIsComplete] = useState(false);
+  const [isFromGrid, setIsFromGrid] = useState(false);
+  const [gridUrl, setGridUrl] = useState("");
 
   useEffect(() => {
     const processAuth = async () => {
       try {
         const currentOrigin = window.location.origin;
         const redirectUri = `${currentOrigin}/spotify-callback`;
-        // const redirectUri = "http://localhost:3000/spotify-callback";
 
         // Get the URL parameters
         const urlParams = new URLSearchParams(window.location.search);
@@ -75,6 +76,14 @@ export default function SpotifyCallback() {
           const redirectUrl = getCookie("redirect_url") || "/";
           const parentUrl = getCookie("parent_url");
 
+          // Check if we came from a grid
+          const fromGrid = checkIfFromGrid(parentUrl || redirectUrl);
+          setIsFromGrid(fromGrid);
+
+          if (fromGrid) {
+            setGridUrl(parentUrl || redirectUrl);
+          }
+
           // Notify parent window if it exists
           if (window.opener) {
             window.opener.postMessage(
@@ -86,44 +95,16 @@ export default function SpotifyCallback() {
               "*"
             );
 
-            setMessage("Authentication successful! You can close this window.");
+            setMessage("Authentication successful!");
+            setIsComplete(true);
 
-            // Close window after a short delay
-            setTimeout(() => {
-              window.close();
-            }, 2000);
+            // Don't auto-close, let user choose
           } else {
-            // If we're not in a popup, redirect based on context
-            if (parentUrl && isFromGrid(parentUrl)) {
-              // We were in a grid, notify the parent and redirect
-              setMessage(
-                "Authentication successful! Redirecting back to the Grid..."
-              );
+            // If we're not in a popup, set as complete and let user choose
+            setMessage("Authentication successful!");
+            setIsComplete(true);
 
-              // Create an invisible iframe to set cookies on the parent domain if needed
-              if (new URL(parentUrl).origin !== window.location.origin) {
-                const bridgeIframe = document.createElement("iframe");
-                bridgeIframe.style.display = "none";
-                bridgeIframe.src = `${
-                  new URL(parentUrl).origin
-                }/cookie-bridge.html?firebase_token=${encodeURIComponent(
-                  data.token
-                )}&spotify_token=${encodeURIComponent(
-                  data.spotifyToken || ""
-                )}`;
-                document.body.appendChild(bridgeIframe);
-              }
-
-              setTimeout(() => {
-                window.location.href = parentUrl;
-              }, 2000);
-            } else {
-              // Standard redirect
-              setMessage("Authentication successful! Redirecting...");
-              setTimeout(() => {
-                window.location.href = redirectUrl;
-              }, 1000);
-            }
+            // Don't auto-redirect, let user choose
           }
         } else {
           setMessage(
@@ -141,8 +122,20 @@ export default function SpotifyCallback() {
     processAuth();
   }, []);
 
+  // Handle return to grid or close window
+  const handleReturn = () => {
+    if (window.opener) {
+      window.close();
+    } else if (gridUrl) {
+      window.location.href = gridUrl;
+    } else {
+      const redirectUrl = getCookie("redirect_url") || "/";
+      window.location.href = redirectUrl;
+    }
+  };
+
   // Helper function to get cookie value
-  function getCookie(name: any) {
+  function getCookie(name: string) {
     const nameEQ = name + "=";
     const ca = document.cookie.split(";");
     for (let i = 0; i < ca.length; i++) {
@@ -154,7 +147,9 @@ export default function SpotifyCallback() {
   }
 
   // Helper function to check if URL is from a Grid
-  function isFromGrid(url: string) {
+  function checkIfFromGrid(url: string) {
+    if (!url) return false;
+
     try {
       const parsedUrl = new URL(url);
       return (
@@ -167,16 +162,74 @@ export default function SpotifyCallback() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
-      <div className="w-full max-w-md p-6 bg-gray-800 rounded-xl shadow-xl">
-        <h1 className="text-2xl font-bold mb-4">Spotify Authentication</h1>
-        <p className="text-gray-300">{message}</p>
+    <div
+      className="min-h-screen flex items-center justify-center bg-cover bg-center"
+      style={{
+        backgroundImage: `url('/mc/Chowlive_Character(13).png')`,
+        backgroundColor: "rgba(17, 24, 39, 0.92)",
+        backgroundBlendMode: "overlay",
+      }}
+    >
+      <div className="w-full max-w-md p-8 backdrop-blur-md bg-gray-900/70 rounded-xl shadow-2xl border border-gray-800">
+        <div className="text-center">
+          <img
+            src="/brand_logo.png"
+            alt="ChowLive"
+            className="h-10 mx-auto mb-6"
+          />
+          <h1 className="text-2xl font-bold mb-4 text-white">
+            Spotify Authentication
+          </h1>
 
-        {/* Progress indicator */}
-        <div className="mt-6">
-          <div className="w-full bg-gray-700 rounded-full h-2.5">
-            <div className="bg-green-600 h-2.5 rounded-full animate-pulse w-full"></div>
-          </div>
+          {isComplete ? (
+            <>
+              <div className="rounded-full bg-green-600/20 p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-8 w-8 text-green-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+              <p className="text-xl text-white mb-2">{message}</p>
+              <p className="text-sm text-gray-300 mb-6">
+                {isFromGrid
+                  ? "Return to the Grid to continue"
+                  : "You can now close this window"}
+              </p>
+              <button
+                onClick={handleReturn}
+                className="w-full py-3 px-4 rounded-lg text-white font-medium transition-all duration-200 bg-green-600/80 hover:bg-green-700/90 backdrop-blur-sm"
+              >
+                {isFromGrid
+                  ? "Return to Grid"
+                  : window.opener
+                  ? "Close Window"
+                  : "Continue"}
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-gray-300 mb-6">{message}</p>
+              {/* Progress indicator */}
+              <div className="w-full bg-gray-800 rounded-full h-2 mb-6">
+                <div className="bg-green-600 h-2 rounded-full animate-pulse w-3/4"></div>
+              </div>
+              <div className="flex items-center justify-center space-x-2">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse delay-75"></div>
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse delay-150"></div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

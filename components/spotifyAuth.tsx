@@ -10,7 +10,7 @@ interface SpotifyAuthProps {
  */
 export const spotifyAuth = {
   /**
-   * Initiates Spotify authentication via redirect
+   * Initiates Spotify authentication via popup window
    * @param provider LUKSO UP Provider
    * @param firebaseProjectId Firebase project ID for cloud functions
    */
@@ -28,17 +28,72 @@ export const spotifyAuth = {
         document.cookie = `spotify_auth_address=${provider.accounts[0]};path=/;max-age=3600;samesite=none;secure`;
       }
 
-      // Store current URL for redirect back
+      // Store iframe URL for redirect back
       document.cookie = `redirect_url=${window.location.href};path=/;max-age=3600;samesite=none;secure`;
+
+      // Try to get the parent Grid URL from referrer
+      const gridUrl =
+        document.referrer ||
+        window.parent?.location?.href ||
+        window.location.href;
+      document.cookie = `parent_url=${gridUrl};path=/;max-age=3600;samesite=none;secure`;
 
       // Construct redirect URL to Firebase function
       const spotifyAuthUrl = `https://us-central1-${firebaseProjectId}.cloudfunctions.net/redirect?state=${encodeURIComponent(
         state
       )}&origin=${encodeURIComponent(window.location.origin)}`;
 
-      // Use top-level navigation (parent window) to avoid iframe restrictions
-      // @ts-expect-error
-      window.top.location.href = spotifyAuthUrl;
+      // Open in a new popup window instead of redirecting
+      const width = 500;
+      const height = 700;
+      const left = (window.innerWidth - width) / 2;
+      const top = (window.innerHeight - height) / 2;
+
+      const popup = window.open(
+        spotifyAuthUrl,
+        "spotify-auth-popup",
+        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+      );
+
+      if (!popup) {
+        // If popup was blocked, fallback to redirect
+        console.warn("Popup was blocked. Falling back to redirect...");
+
+        // Before redirecting, try to store info in localStorage as a backup
+        try {
+          localStorage.setItem("spotify_auth_from_grid", "true");
+          localStorage.setItem("spotify_auth_grid_url", gridUrl);
+        } catch (e) {
+          console.warn("Could not access localStorage", e);
+        }
+
+        window.location.href = spotifyAuthUrl;
+        return;
+      }
+
+      // Set up message listener to receive authentication data
+      const messageListener = (event: MessageEvent) => {
+        if (
+          event.data &&
+          event.data.type === "SPOTIFY_AUTH_SUCCESS" &&
+          event.data.firebaseToken
+        ) {
+          // Store tokens
+          document.cookie = `firebase_auth_token=${event.data.firebaseToken};path=/;max-age=2592000;samesite=none;secure`;
+
+          if (event.data.spotifyToken) {
+            document.cookie = `spotify_token=${event.data.spotifyToken};path=/;max-age=2592000;samesite=none;secure`;
+          }
+
+          // Clean up
+          window.removeEventListener("message", messageListener);
+
+          // Refresh the current page to reflect authenticated state
+          window.location.reload();
+        }
+      };
+
+      window.addEventListener("message", messageListener);
     } catch (error) {
       console.error("Error initiating Spotify auth:", error);
       throw error;
@@ -104,14 +159,45 @@ export const spotifyAuth = {
 
         // Get redirect URL from cookie
         const redirectUrl = getCookie("redirect_url") || "/";
+        const parentUrl = getCookie("parent_url");
 
         // Clear auth state cookie
         document.cookie =
           "spotify_auth_state=;path=/;max-age=0;samesite=none;secure";
 
-        // Redirect back to the original page
-        window.location.href = redirectUrl;
-        return true;
+        // If we're in a popup, send message to opener
+        if (window.opener) {
+          window.opener.postMessage(
+            {
+              type: "SPOTIFY_AUTH_SUCCESS",
+              firebaseToken: data.token,
+              spotifyToken: data.spotifyToken,
+            },
+            "*"
+          );
+          return true;
+        } else {
+          // Check localStorage as backup if we came from Grid
+          let isFromGrid = false;
+          let gridUrl = parentUrl;
+
+          try {
+            isFromGrid =
+              localStorage.getItem("spotify_auth_from_grid") === "true";
+            if (isFromGrid && !gridUrl) {
+              gridUrl = localStorage.getItem("spotify_auth_grid_url");
+            }
+            // Clean up localStorage
+            localStorage.removeItem("spotify_auth_from_grid");
+            localStorage.removeItem("spotify_auth_grid_url");
+          } catch (e) {
+            console.warn("Could not access localStorage", e);
+          }
+
+          // Redirect back to the appropriate URL
+          window.location.href = gridUrl || redirectUrl;
+          return true;
+        }
       } else {
         throw new Error(data.error || "Failed to get authentication token");
       }
