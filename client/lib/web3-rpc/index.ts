@@ -47,16 +47,12 @@ export default class LuksoRpc {
       chain: luksoMainnet,
       transport: http(),
     });
-    if (provider) {
-      this.walletClient = createWalletClient({
-        chain: luksoMainnet,
-        transport: custom(provider),
-      });
-      this._isInitialized = true;
-    } 
+    this.walletClient = createWalletClient({
+      chain: luksoMainnet,
+      transport: custom(provider),
+    });
+    this._isInitialized = true;
   }
-
-
 
   async connectWallet(provider: any): Promise<string[] | any> {
     try {
