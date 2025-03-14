@@ -423,4 +423,31 @@ export default class LuksoRpc {
       throw error;
     }
   }
+
+  async isSubscribedToRoom(roomId: number): Promise<boolean> {
+    try {
+      const accounts = await this.getAccounts();
+      if (!accounts || accounts.length === 0) {
+        return false;
+      }
+
+      const contractAddress = process.env
+        .NEXT_PUBLIC_CHOWLIVE_ROOM as `0x${string}`;
+      if (!contractAddress) {
+        throw new Error("Contract address not found");
+      }
+
+      const isSubscribed = await this.publicClient.readContract({
+        address: contractAddress,
+        abi: chowliveRoomABI.abi,
+        functionName: "hasAccess",
+        args: [accounts[0], BigInt(roomId)],
+      });
+
+      return isSubscribed as boolean;
+    } catch (error) {
+      console.error("Error checking subscription status:", error);
+      return false;
+    }
+  }
 }

@@ -13,9 +13,11 @@ import useSpotifyTrack from "../useSpotifyTrack";
 import { useSpotifyAuth } from "../useSpotifyAuth";
 import QueueDrawer from "./QueueDrawer";
 import RoomSkeletonLoader from "../molecules/roomSkeletonLoader";
+import { abbreviateAddress } from "@/configs/env";
+import { FiClipboard, FiCheck } from "react-icons/fi";
 
 export const RoomView = ({ slug }: { slug: any }) => {
-  const room = useMonitorRoom(slug);
+  const { room, isLoadingRoom, isSubscribed } = useMonitorRoom(slug);
   const queue = useQueue(room.id);
   const song = queue ? queue[0] || undefined : undefined;
   const [progress, setProgress] = useState(0);
@@ -123,6 +125,22 @@ export const RoomView = ({ slug }: { slug: any }) => {
     setIsQueueOpen(false);
   };
 
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleCopyUrl = () => {
+    const url = `${window.location.origin}/rooms/${room.slug}`;
+    navigator.clipboard
+      .writeText(url)
+      .then(() => {
+        console.log("URL copied to clipboard:", url);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+      })
+      .catch((err) => {
+        console.error("Failed to copy URL:", err);
+      });
+  };
+
   if (isLoadingSpotify) {
     return (
       <div className="p-4 w-full max-w-md mx-auto">
@@ -164,7 +182,11 @@ export const RoomView = ({ slug }: { slug: any }) => {
     );
   }
 
-  if ((!isLoadingSpotify && error) || (!isLoadingSpotify && !room)) {
+  if (
+    (!isLoadingSpotify && error) ||
+    (!isLoadingSpotify && !room) ||
+    isLoadingRoom
+  ) {
     return <RoomSkeletonLoader />;
   }
 
@@ -188,12 +210,29 @@ export const RoomView = ({ slug }: { slug: any }) => {
   }
 
   return (
-    <div className="p-4">
-      <div className="bg-gray-900 rounded-2xl shadow-xl overflow-hidden">
+    <div className="w-full max-w-md mx-auto p-4">
+      <div className="bg-gray-900 rounded-2xl shadow-xl overflow-hidden ">
         {/* Header */}
-        <div className="p-6 border-b border-gray-800">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold text-white">{room.name}</h2>
+        <div className="p-6 border-b border-gray-800 ">
+          <div className="flex justify-between items-center relative">
+            <div className="flex items-center">
+              <div className="opacity-90">
+                <img src="/logo.svg" alt="brand" style={{ height: "30px" }} />
+              </div>
+              <h2 className="text-md font-semibold text-white flex items-center">
+                Room: {room.name || "Room Name"}
+                <button
+                  onClick={handleCopyUrl}
+                  className="ml-2 text-gray-400 hover:text-white transition-colors"
+                >
+                  {isCopied ? (
+                    <FiCheck className="w-5 h-5" />
+                  ) : (
+                    <FiClipboard className="w-5 h-5" />
+                  )}
+                </button>
+              </h2>
+            </div>
             <button
               onClick={onBack}
               className="text-gray-400 hover:text-white transition-colors"
@@ -201,28 +240,33 @@ export const RoomView = ({ slug }: { slug: any }) => {
               Back
             </button>
           </div>
-          <p className="text-sm text-gray-400">Room ID: {room.id || roomId}</p>
-          <p className="text-sm text-gray-400">NFT ID: {room.nftId}</p>
-          <p className="text-sm text-gray-400">
-            Host: {room.creator_id || "Unknown"}
+          <p className="text-xs text-gray-400">Room ID: {room.id || roomId}</p>
+          <p className="text-xs text-gray-400">NFT ID: {room.nftId}</p>
+          <p className="text-xs text-gray-400">
+            Host:{" "}
+            {room.creator_id ? abbreviateAddress(room.creator_id) : "Unknown"}
           </p>
         </div>
 
         {/* Content */}
         <div className="p-6">
           {/* /ToDO: change to account address for host */}
-          {!isJoined && room.creator_id !== accounts[0] ? (
+          {room && !isJoined && !isSubscribed ? (
             <div className="flex flex-col items-center py-8">
               <p className="mb-4 text-gray-300">
-                Join this room to listen together
+                Let's queue songs and vibe together!
               </p>
-              <button
-                disabled={isLoading}
-                onClick={handleJoin}
-                className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-medium transition duration-200"
-              >
-                Join Room
-              </button>
+              {isLoadingRoom ? (
+                "Loading room..."
+              ) : (
+                <button
+                  disabled={isLoading || isLoadingRoom || !accounts[0]}
+                  onClick={handleJoin}
+                  className="bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-lg font-medium transition duration-200"
+                >
+                  Join Room
+                </button>
+              )}
             </div>
           ) : (
             <div className="relative">
