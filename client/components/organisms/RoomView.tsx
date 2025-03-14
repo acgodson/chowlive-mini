@@ -12,6 +12,7 @@ import useHandlePlayback from "../useHandlePlayback";
 import useSpotifyTrack from "../useSpotifyTrack";
 import { useSpotifyAuth } from "../useSpotifyAuth";
 import QueueDrawer from "./QueueDrawer";
+import RoomSkeletonLoader from "../molecules/roomSkeletonLoader";
 
 export const RoomView = ({ slug }: { slug: any }) => {
   const room = useMonitorRoom(slug);
@@ -164,9 +165,13 @@ export const RoomView = ({ slug }: { slug: any }) => {
   }
 
   if ((!isLoadingSpotify && error) || (!isLoadingSpotify && !room)) {
+    return <RoomSkeletonLoader />;
+  }
+
+  if ((!isLoadingSpotify && error) || (!isLoadingSpotify && !room)) {
     return (
-      <div className="p-4">
-        <div className="bg-gray-900 rounded-2xl shadow-xl overflow-hidden">
+      <div className="w-full max-w-md mx-auto p-4">
+        <div className="bg-gray-900 rounded-2xl shadow-xl overflow-hidden w-full">
           <div className="p-6">
             <h2 className="text-xl font-semibold text-white mb-4">Error</h2>
             <p className="text-gray-300 mb-4">{error || "Room not found"}</p>

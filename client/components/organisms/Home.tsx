@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useUpProvider } from "../upProvider";
 import { useSpotifyAuth } from "../useSpotifyAuth";
+import { FaAsterisk } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/trpc/client";
 import LuksoRpc from "@/lib/web3-rpc";
@@ -288,7 +289,7 @@ export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-400">
+                <div className="text-center py-8 text-gray-400 relative">
                   <p>You haven&apos;t created any rooms yet.</p>
                   <button
                     className="mt-4 px-4 py-2 bg-red-600/80 hover:bg-red-700/90 text-white rounded-lg"
@@ -296,9 +297,15 @@ export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
                       setShowSwitcher(false);
                       setShowCreateForm(true);
                     }}
+                    disabled={!accounts[0]}
                   >
                     Create Your First Room
                   </button>
+                  {!accounts[0] && (
+                    <span className="text-red-65 text-sm justify-center text-center w-full  absolute flex top-0 items-center ">
+                      <FaAsterisk className="mr-2" /> UP Required
+                    </span>
+                  )}
                 </div>
               )}
             </div>
@@ -340,9 +347,14 @@ export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
                       <div>
                         <label
                           htmlFor="roomId"
-                          className="block text-sm font-medium text-gray-300 mb-1"
+                          className="block text-sm font-medium text-gray-300 mb-1 relative"
                         >
                           Room ID
+                          {!accounts[0] && (
+                            <span className="text-red-65 text-sm absolute flex right-0 top-0 items-center ">
+                              <FaAsterisk className="mr-2" /> UP Required
+                            </span>
+                          )}
                         </label>
                         <input
                           id="roomId"
@@ -356,7 +368,7 @@ export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
                       <button
                         className="w-full bg-red-600/80 hover:bg-red-700/90 backdrop-blur-sm text-white py-3 px-4 rounded-lg font-medium transition duration-200"
                         onClick={() => handleJoinRoom()}
-                        disabled={!roomIdInput.trim()}
+                        disabled={!roomIdInput.trim() || !accounts[0]}
                       >
                         Join Room
                       </button>
@@ -372,6 +384,7 @@ export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
                       <button
                         className="w-full bg-gray-700/80 hover:bg-gray-600/90 backdrop-blur-sm text-white py-3 px-4 rounded-lg font-medium transition duration-200"
                         onClick={() => setShowCreateForm(true)}
+                        disabled={!accounts[0]}
                       >
                         Create New Room
                       </button>
