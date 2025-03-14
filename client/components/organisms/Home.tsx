@@ -140,7 +140,7 @@ export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
   };
 
   const fetchUserRooms = async () => {
-    if (!accounts?.[0] || !provider) return;
+    if (!accounts?.[0] || !provider || !isAuthenticated) return;
 
     setIsLoadingRooms(true);
     try {

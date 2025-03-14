@@ -8,6 +8,7 @@ import {
   createWalletClient,
   decodeEventLog,
   type WalletClient,
+  getAddress,
 } from "viem";
 import { createClientUPProvider } from "@lukso/up-provider";
 import chowliveRoomABI from "./ChowliveRoom.json";
@@ -311,7 +312,7 @@ export default class LuksoRpc {
   async getUserSubscribedRooms(): Promise<number[]> {
     try {
       const accounts = await this.getAccounts();
-      if (!accounts || accounts.length === 0) {
+      if (!accounts || accounts.length === 0 || !accounts[0]) {
         return [];
       }
 
@@ -321,14 +322,17 @@ export default class LuksoRpc {
         throw new Error("Contract address not found");
       }
 
+    console.log("user address", accounts[0]);
       const subscribedRooms = await this.publicClient.readContract({
         address: contractAddress,
         abi: chowliveRoomABI.abi,
         functionName: "getUserSubscribedRooms",
-        args: [accounts[0] as `0x${string}`],
+        args: [getAddress(accounts[0])],
       });
 
-      return (subscribedRooms as bigint[]).map((roomId) => Number(roomId));
+      return (subscribedRooms as any).map(
+        (roomId: any) => roomId && Number(roomId)
+      );
     } catch (error) {
       console.error("Error getting user subscribed rooms:", error);
       return [];
@@ -352,7 +356,7 @@ export default class LuksoRpc {
         address: contractAddress,
         abi: chowliveRoomABI.abi,
         functionName: "getUserActiveSubscriptions",
-        args: [accounts[0] as `0x${string}`],
+        args: [accounts[0]],
       });
 
       return (activeSubscriptions as bigint[]).map((roomId) => Number(roomId));
@@ -379,7 +383,7 @@ export default class LuksoRpc {
         address: contractAddress,
         abi: chowliveRoomABI.abi,
         functionName: "hasAccess",
-        args: [accounts[0] as `0x${string}`, BigInt(roomId)],
+        args: [accounts[0], BigInt(roomId)],
       });
 
       return hasAccess as boolean;
