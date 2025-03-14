@@ -17,10 +17,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning={true}>
       <body suppressHydrationWarning={true}>
         <UpProvider>
-          {/* <AuroraBackground> */}
-            {children}
-
-          {/* </AuroraBackground> */}
+          <AuroraBackground>{children}</AuroraBackground>
         </UpProvider>
       </body>
     </html>
