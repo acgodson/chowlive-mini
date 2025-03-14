@@ -254,7 +254,7 @@ export const RoomView = ({ slug }: { slug: any }) => {
           {room && !isJoined && !isSubscribed ? (
             <div className="flex flex-col items-center py-8">
               <p className="mb-4 text-gray-300">
-                Let's queue songs and vibe together!
+                Let&lsquo;s queue songs and vibe together!
               </p>
               {isLoadingRoom ? (
                 "Loading room..."

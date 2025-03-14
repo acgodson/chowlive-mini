@@ -64,6 +64,7 @@ const useMonitorRoom = (slug?: string | number): MonitorRm => {
         }
         setisLoadingRoom(false);
       } catch (e) {
+        console.error(e);
         setisLoadingRoom(false);
       }
     };
