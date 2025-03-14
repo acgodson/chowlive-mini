@@ -187,7 +187,7 @@ export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
         {/* Background Image with Header - Reduced height */}
         <div
           className="relative"
-          style={{ maxHeight: "30vh", minHeight: "100px" }}
+          style={{ maxHeight: "30vh", minHeight: "160px" }}
         >
           <div
             className="absolute inset-0 z-0 bg-cover bg-top"

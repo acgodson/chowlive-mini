@@ -39,31 +39,58 @@ export default class LuksoRpc {
   private provider: any;
   private publicClient: PublicClient;
   private walletClient: WalletClient;
+  private _isInitialized: boolean = false;
 
   constructor(provider: any) {
-    if (!provider?.accounts[0]) {
-      throw new Error("No account connected");
-    }
     this.provider = provider;
-    // Create public client for read operations
     this.publicClient = createPublicClient({
       chain: luksoMainnet,
       transport: http(),
     });
-
-    // Create wallet client for write operations
-    this.walletClient = createWalletClient({
-      chain: luksoMainnet,
-      transport: custom(provider),
-    });
+    if (provider) {
+      this.walletClient = createWalletClient({
+        chain: luksoMainnet,
+        transport: custom(provider),
+      });
+      this._isInitialized = true;
+    } 
   }
 
-  // Create a static method to get a provider directly
+
+
+  async connectWallet(provider: any): Promise<string[] | any> {
+    try {
+      // First check if we're in an iframe
+      if (window.self !== window.top) {
+        console.log("In iframe - skipping direct wallet connection");
+        return this.getAccounts();
+      }
+      if (provider) {
+        try {
+          const accounts = await provider.request({
+            method: "eth_requestAccounts",
+          });
+
+          // If successful, reinitialize with the extension
+          if (accounts && accounts.length > 0) {
+            return accounts;
+          }
+        } catch (error) {
+          console.error("Error connecting via extension:", error);
+        }
+      } else {
+        throw new Error(`No provider available for connection`);
+      }
+    } catch (error) {
+      console.error("Error connecting wallet:", error);
+      throw error;
+    }
+  }
+
   static getUpProvider() {
     return createClientUPProvider();
   }
 
-  // Get static clients
   static getPublicClient() {
     return createPublicClient({
       chain: luksoMainnet,
@@ -72,6 +99,10 @@ export default class LuksoRpc {
   }
 
   static getWalletClient(provider: any) {
+    if (!provider) {
+      throw new Error("No provider provided to getWalletClient");
+    }
+
     return createWalletClient({
       chain: luksoMainnet,
       transport: custom(provider),
@@ -322,7 +353,7 @@ export default class LuksoRpc {
         throw new Error("Contract address not found");
       }
 
-    console.log("user address", accounts[0]);
+      console.log("user address", accounts[0]);
       const subscribedRooms = await this.publicClient.readContract({
         address: contractAddress,
         abi: chowliveRoomABI.abi,

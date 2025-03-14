@@ -33,6 +33,7 @@ import {
 import { TRPCProvider } from "@/trpc/client";
 import { SpotifyWebPlaybackProvider as SpotifyWebPlayback } from "./spotify-provider/SpotifyWebPlayback";
 import { SpotifyProvider } from "./state/spotifyContext";
+import LuksoRpc from "@/lib/web3-rpc";
 
 interface UpProviderContext {
   provider: UPClientProvider | null;
@@ -45,6 +46,7 @@ interface UpProviderContext {
   setSelectedAddress: (address: `0x${string}` | null) => void;
   isSearching: boolean;
   setIsSearching: (isSearching: boolean) => void;
+  connectWallet: any;
 }
 
 const UpContext = createContext<UpProviderContext | undefined>(undefined);
@@ -153,6 +155,21 @@ export function UpProvider({ children }: UpProviderProps) {
     // look at array values like vue or knockout.
   }, [client, account, contextAccount]);
 
+  const connectWallet = async () => {
+    if (!provider) return;
+    console.log(provider);
+    const extension = window.lukso || window.ethereum;    
+    if (!extension) {
+      window.open("https://chromewebstore.google.com/detail/universal-profiles/abpickdkkbnbcoepogfhkhennhfhehfn", "_blank");
+      return;
+    }
+    const rpc = new LuksoRpc(provider);
+    const _accounts = await rpc.connectWallet(provider);
+    if (_accounts) {
+      setAccounts(_accounts as any);
+    }
+  };
+
   // There has to be a useMemo to make sure the context object doesn't change on every
   // render.
   const data = useMemo(() => {
@@ -169,6 +186,7 @@ export function UpProvider({ children }: UpProviderProps) {
       setIsSearching,
       roomId,
       setRoomId,
+      connectWallet,
     };
   }, [
     client,
