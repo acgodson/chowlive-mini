@@ -56,6 +56,9 @@ export const RoomView = ({ slug }: { slug: any }) => {
     setChangeToIsPaused(isPaused);
     console.log(changeToIsPaused);
   }, [isPaused]);
+  useEffect(() => {
+    console.log("subscription status", isSubscribed);
+  }, [isSubscribed]);
 
   const onBack = () => {
     // Handle navigation back
@@ -251,7 +254,10 @@ export const RoomView = ({ slug }: { slug: any }) => {
         {/* Content */}
         <div className="p-6">
           {/* /ToDO: change to account address for host */}
-          {room && !isJoined && !isSubscribed ? (
+          {room &&
+          !isJoined &&
+          !isSubscribed &&
+          room.creator_id !== accounts[0] ? (
             <div className="flex flex-col items-center py-8">
               <p className="mb-4 text-gray-300">
                 Let&lsquo;s queue songs and vibe together!
@@ -314,6 +320,7 @@ export const RoomView = ({ slug }: { slug: any }) => {
 
                 {/* Controls */}
                 {isJoined ||
+                  isSubscribed ||
                   (room.creator_id === accounts[0] && (
                     <div>
                       {/* Progress bar */}
