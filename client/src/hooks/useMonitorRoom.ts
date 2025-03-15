@@ -144,9 +144,9 @@ const useMonitorRoom = (slug?: string | number): MonitorRm => {
     };
 
     checkSubscription();
-  }, [db, slug, accounts]);
+  }, [db, slug, accounts, setIsSubscribed ]);
 
-  return { room, isLoadingRoom, isSubscribed };
+  return { room, isLoadingRoom, isSubscribed, };
 };
 
 export default useMonitorRoom;

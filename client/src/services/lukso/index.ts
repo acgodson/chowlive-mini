@@ -519,7 +519,7 @@ export default class LuksoRpc {
         address: contractAddress,
         abi: chowliveRoomABI.abi,
         functionName: "hasAccess",
-        args: [accounts[0], BigInt(roomId)],
+        args: [getAddress(accounts[0]), BigInt(roomId)],
       });
 
       return isSubscribed as boolean;
