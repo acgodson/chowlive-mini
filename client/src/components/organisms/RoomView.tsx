@@ -138,6 +138,7 @@ export const RoomView = ({ slug }: { slug: any }) => {
       const response = await luksoRpc.joinRoom(room.nftId);
       console.log("subscription fee", response.fee);
       setIsLoading(false);
+      router.refresh();
     } catch (err) {
       setError("Failed to join room");
       console.error(err);
@@ -414,7 +415,7 @@ export const RoomView = ({ slug }: { slug: any }) => {
                 {isLoadingSpotify ? "Connecting..." : "Connect Spotify"}
               </button>
             </div>
-          ) : room && !isSubscribed && room.creator_id !== accounts[0] ? (
+          ) : room && (!isSubscribed || room.creator_id !== accounts[0]) ? (
             <div className="flex flex-col items-center py-8">
               <p className="mb-4 text-gray-300">
                 Let&lsquo;s queue songs and vibe together!
@@ -519,8 +520,7 @@ export const RoomView = ({ slug }: { slug: any }) => {
                 {/* Controls */}
                 {accounts[0] &&
                   accounts[0].length > 0 &&
-                  (
-                    isSubscribed ||
+                  (isSubscribed ||
                     (getAddress(room.creator_id) ===
                       getAddress(accounts[0]) && (
                       <div>
