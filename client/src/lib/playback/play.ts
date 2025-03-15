@@ -4,7 +4,7 @@ import { handleAndReturn } from './utils/handleAndReturn';
 import SpotifyAPI from '../spotify';
 
 export type PlaybackAPIPlayProps = PlaybackProps & {
-  progress: number; // ms position
+  progress: number; 
 };
 
 export const play = async (props: PlaybackAPIPlayProps): Promise<PlaybackResponse<void> | void> => {

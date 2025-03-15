@@ -5,8 +5,6 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useUpProvider } from "@/src/services/lukso/upProvider";
 import useMonitorRoom from "@/src/hooks/useMonitorRoom";
 import { trpc } from "@/src/trpc/client";
-// import { playbackConfigurationAtom } from "../state/playbackConfigurationAtom";
-// import { useAtom } from "jotai";
 import useQueue from "@/src/hooks/useQueue";
 import useHandlePlayback from "@/src/hooks/useHandlePlayback";
 import useSpotifyTrack from "@/src/hooks/useSpotifyTrack";
@@ -15,65 +13,123 @@ import QueueDrawer from "../molecules/QueueDrawer";
 import RoomSkeletonLoader from "../molecules/roomSkeletonLoader";
 import { abbreviateAddress } from "@/src/configs/env";
 import { FiClipboard, FiCheck } from "react-icons/fi";
+import { getAddress } from "viem";
+import { useRouter } from "next/navigation";
 
 export const RoomView = ({ slug }: { slug: any }) => {
-  const { room, isLoadingRoom, isSubscribed } = useMonitorRoom(slug);
-  const queue = useQueue(room.id);
-  const song = queue ? queue[0] || undefined : undefined;
-  const [progress, setProgress] = useState(0);
-  const memoizedSong = useMemo(() => song, [song?.id]);
-  const {} = useHandlePlayback(memoizedSong, setProgress);
-
+  const roomId = slug;
+  const router = useRouter();
   const { accounts } = useUpProvider();
-
-  const currentTrack = useSpotifyTrack(song);
-  // const isSongInQueue = !!track && !!song;
-
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isJoined, setIsJoined] = useState(false);
-  // const [isCreator] = useState(false);
   const {
     isAuthenticated,
     isLoading: isLoadingSpotify,
     connect,
   } = useSpotifyAuth();
+  const [isInIframe, setIsInIframe] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isJoined, setIsJoined] = useState(false);
+  const [changeToIsPaused, setChangeToIsPaused] = useState(true);
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [isSkippingSong, setIsSkippingSong] = useState(false);
 
-  // const [playbackConfiguration, setPlaybackConfiguration] = useAtom(
-  //   playbackConfigurationAtom
-  // );
-
-  const roomId = slug;
-
-  const [changeToIsPaused, setChangeToIsPaused] = useState(true);
   const { mutateAsync: updatePlayback } = trpc.updatePlayback.useMutation();
+  const { room, isLoadingRoom, isSubscribed } = useMonitorRoom(slug);
+  const queue = useQueue(room.id);
 
+  const song = queue ? queue[0] || undefined : undefined;
+  const [progress, setProgress] = useState(0);
+  const memoizedSong = useMemo(
+    () => song,
+    [
+      song?.id,
+      song?.spotifyUri,
+      song?.isPaused,
+      song?.progress,
+      song?.duration_ms,
+    ]
+  );
+  useHandlePlayback(memoizedSong, setProgress);
+  const progressPercentage = song?.duration_ms
+    ? Math.min((progress / song.duration_ms) * 100, 100)
+    : 0;
+
+  const spotifyTrackResult = useSpotifyTrack(memoizedSong);
+  const currentTrack = spotifyTrackResult;
+
+  useEffect(() => {
+    console.log("[RoomView] spotifyTrackResult:", spotifyTrackResult);
+    console.log("[RoomView] currentTrack:", currentTrack);
+  }, [spotifyTrackResult, currentTrack]);
+
+  useEffect(() => {
+    setIsInIframe(window.self !== window.top);
+  }, []);
+
+  useEffect(() => {
+    console.log(
+      "[RoomView] currentTrack:",
+      currentTrack
+        ? {
+            id: currentTrack.id,
+            name: currentTrack.name,
+            hasAlbum: !!currentTrack.album,
+            hasImages: currentTrack.album?.images?.length > 0,
+            firstImageUrl: currentTrack.album?.images?.[0]?.url,
+          }
+        : "undefined/null"
+    );
+  }, [currentTrack]);
+
+  const [currentTrackKey, setCurrentTrackKey] = useState(0);
   const isPaused = song ? song.isPaused : false;
+
+  useEffect(() => {
+    console.log(
+      "[RoomView] song updated:",
+      song
+        ? {
+            id: song.id,
+            spotifyUri: song.spotifyUri,
+            isPaused: song.isPaused,
+          }
+        : "undefined/null"
+    );
+
+    console.log(
+      "[RoomView] memoizedSong:",
+      memoizedSong
+        ? {
+            id: memoizedSong.id,
+            spotifyUri: memoizedSong.spotifyUri,
+            isPaused: memoizedSong.isPaused,
+          }
+        : "undefined/null"
+    );
+  }, [song, memoizedSong]);
 
   useEffect(() => {
     setChangeToIsPaused(isPaused);
     console.log(changeToIsPaused);
   }, [isPaused]);
-  useEffect(() => {
-    console.log("subscription status", isSubscribed);
-  }, [isSubscribed]);
 
-  const onBack = () => {
-    // Handle navigation back
-    window.history.back();
-  };
+  useEffect(() => {
+    if (song?.id) {
+      // Force a refresh of the currentTrack when song changes
+      setCurrentTrackKey((prev) => prev + 1);
+      console.log("Track display forced to refresh for song:", song.id);
+    }
+  }, [song?.id]);
+
+  const onBack = () => router.back();
 
   const handleJoin = async () => {
     if (!accounts[0] || !room) return;
 
     try {
       setIsLoading(true);
-      // const joined = await joinRoom(roomId, accounts[0]);
-      // if (joined) {
       setIsJoined(true);
-      // }
+      setIsLoading(false);
     } catch (err) {
       setError("Failed to join room");
       console.error(err);
@@ -81,12 +137,6 @@ export const RoomView = ({ slug }: { slug: any }) => {
       setIsLoading(false);
     }
   };
-
-  // const handleTogglePlaybackConfiguration = () =>
-  //   setPlaybackConfiguration({
-  //     ...playbackConfiguration,
-  //     linked: !playbackConfiguration.linked,
-  //   });
 
   const handleSkipForward = async () => {
     if (!song) return;
@@ -108,19 +158,53 @@ export const RoomView = ({ slug }: { slug: any }) => {
   };
 
   const handleTogglePlay = async () => {
-    if (!song) return;
-    setChangeToIsPaused(!isPaused);
+    if (!song || isLoadingSpotify || !isAuthenticated) {
+      console.log("[RoomView] Toggle play aborted - missing requirements:", {
+        hasSong: !!song,
+        isLoadingSpotify,
+        isAuthenticated,
+      });
+      return;
+    }
 
-    await updatePlayback({
-      isPaused: !isPaused,
-      songId: song.id,
-    });
+    try {
+      const newIsPaused = !isPaused;
+      console.log(
+        `[RoomView] Toggling playback state to ${
+          newIsPaused ? "paused" : "playing"
+        }`
+      );
 
-    console.log(isPaused ? "Played song." : "Paused song.");
+      // Update local state immediately for responsive UI
+      setChangeToIsPaused(newIsPaused);
+
+      // Call the server to update the playback state
+      const response = await updatePlayback({
+        isPaused: newIsPaused,
+        songId: song.id,
+      });
+
+      console.log("[RoomView] Playback update response:", response);
+
+      if (response === undefined) {
+        // This is normal - server returns undefined on success
+        console.log(newIsPaused ? "Paused song." : "Played song.");
+      } else {
+        console.warn("Unexpected response from updatePlayback:", response);
+      }
+
+      // Trigger useHandlePlayback to run again by forcing a refresh of the trackKey
+      setTimeout(() => {
+        setCurrentTrackKey((prev) => prev + 1);
+      }, 300);
+    } catch (error) {
+      console.error("Playback toggle failed", error);
+      // Revert the local state change since the server update failed
+      setChangeToIsPaused(isPaused);
+    }
   };
-
   const addToQueue = () => {
-    console.log("Add to queue");
+    console.log("Opening add to queue dialog");
     setIsQueueOpen(true);
   };
 
@@ -212,6 +296,60 @@ export const RoomView = ({ slug }: { slug: any }) => {
     );
   }
 
+  const TrackDebugger = ({ currentTrack, song, progress }: any) => {
+    if (!song) return null;
+
+    return (
+      <div className="fixed bottom-0 right-0 bg-black/80 text-white p-2 text-xs z-50 max-w-xs overflow-auto">
+        <div className="font-bold mb-1">Debug Info:</div>
+        <div>Song ID: {song?.id?.substring(0, 8)}...</div>
+        <div>Is Paused: {song?.isPaused ? "Yes" : "No"}</div>
+        <div>
+          Progress: {progress}ms ({(progress / 1000).toFixed(1)}s)
+        </div>
+        <div>
+          Duration: {song?.duration_ms}ms (
+          {(song?.duration_ms / 1000).toFixed(1)}s)
+        </div>
+        <div>Track Loaded: {currentTrack ? "Yes" : "No"}</div>
+        {currentTrack && (
+          <>
+            <div className="font-bold mt-1">Track Data:</div>
+            <div>Name: {currentTrack.name}</div>
+            <div>Album: {currentTrack.album?.name}</div>
+            <div>
+              Has Images:{" "}
+              {currentTrack.album?.images?.length > 0 ? "Yes" : "No"}
+            </div>
+            {currentTrack.album?.images?.[0] && (
+              <div>
+                <div>Image URL:</div>
+                <div className="break-all">
+                  {currentTrack.album.images[0].url}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+        <button
+          onClick={() => {
+            console.log("[DEBUG] Full currentTrack:", currentTrack);
+            console.log("[DEBUG] Full song:", song);
+            // Force refresh track display
+            //@ts-ignore
+            if ((window as any).__forceLoadSpotifyTrack) {
+              //@ts-ignore
+              window.__forceLoadSpotifyTrack();
+            }
+          }}
+          className="mt-2 bg-red-600 text-white px-2 py-1 rounded text-xs"
+        >
+          Refresh Track
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="w-full max-w-md mx-auto p-4">
       <div className="bg-gray-900 rounded-2xl shadow-xl overflow-hidden ">
@@ -247,7 +385,9 @@ export const RoomView = ({ slug }: { slug: any }) => {
           <p className="text-xs text-gray-400">NFT ID: {room.nftId}</p>
           <p className="text-xs text-gray-400">
             Host:{" "}
-            {room.creator_id ? abbreviateAddress(room.creator_id) : "Unknown"}
+            {room.creator_id
+              ? abbreviateAddress(getAddress(room.creator_id))
+              : "Unknown"}
           </p>
         </div>
 
@@ -266,10 +406,7 @@ export const RoomView = ({ slug }: { slug: any }) => {
                 {isLoadingSpotify ? "Connecting..." : "Connect Spotify"}
               </button>
             </div>
-          ) : room &&
-            !isJoined &&
-            !isSubscribed &&
-            room.creator_id !== accounts[0] ? (
+          ) : room && !isSubscribed && room.creator_id !== accounts[0] ? (
             <div className="flex flex-col items-center py-8">
               <p className="mb-4 text-gray-300">
                 Let&lsquo;s queue songs and vibe together!
@@ -291,32 +428,62 @@ export const RoomView = ({ slug }: { slug: any }) => {
               {/* Music Player */}
               <div className="mb-6 overflow-hidden">
                 <div className="relative h-48 rounded-lg overflow-hidden mb-4">
-                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 opacity-50 animate-gradient-x"></div>
-                  <div className="absolute inset-0 backdrop-blur-sm"></div>
-
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 opacity-100 animate-gradient-x"></div>
+                  {/* <div className="absolute inset-0 backdrop-blur-sm"></div> */}
                   {currentTrack ? (
-                    <div className="flex items-center justify-center h-full">
+                    <div
+                      key={currentTrackKey}
+                      className="flex items-center justify-center h-full relative"
+                      data-has-track="true"
+                    >
+                      {/* Add debug info above track display */}
+                      <div className="absolute top-0 left-0 right-0 bg-black/50 text-xs text-gray-300 p-1 z-10">
+                        Track: {currentTrack.name} [
+                        {currentTrack.id?.substring(0, 6)}...]
+                      </div>
+
                       <img
                         src={
-                          currentTrack.album?.images[0]?.url ||
+                          currentTrack.album?.images?.[0]?.url ||
                           "/placeholder-album.png"
                         }
                         alt={currentTrack.album?.name || "Album art"}
                         className="w-32 h-32 rounded-lg object-cover shadow-lg"
+                        onLoad={() =>
+                          console.log(
+                            "[RoomView] Image loaded successfully:",
+                            currentTrack.album?.images?.[0]?.url
+                          )
+                        }
+                        onError={(e) => {
+                          console.error("[RoomView] Image failed to load:", e);
+                          console.log(
+                            "[RoomView] Image URL was:",
+                            currentTrack.album?.images?.[0]?.url
+                          );
+                          // Fallback to placeholder
+                          (e.target as HTMLImageElement).src =
+                            "/placeholder-album.png";
+                        }}
                       />
                       <div className="ml-4 text-white">
                         <h3 className="text-lg font-bold">
-                          {currentTrack.name}
+                          {currentTrack.name || "[No track name]"}
                         </h3>
                         <p className="text-sm text-gray-300">
                           {currentTrack.artists
-                            ?.map((a: any) => a.name)
-                            .join(", ")}
+                            ? currentTrack.artists
+                                .map((a: any) => a.name)
+                                .join(", ")
+                            : "[No artists]"}
                         </p>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex relative items-center justify-center h-full text-white">
+                    <div
+                      className="flex relative items-center justify-center h-full text-white"
+                      data-has-track="false"
+                    >
                       <img
                         src="/mc/Chowlive_Character(13).png"
                         alt="DJ Character"
@@ -325,93 +492,107 @@ export const RoomView = ({ slug }: { slug: any }) => {
 
                       <p className="text-center absolute backdrop-blur-sm p-16">
                         No track currently playing
+                        {/* {song ? (
+                          <span className="block text-xs text-gray-300 mt-2">
+                            Has song: {song.id.substring(0, 8)}...
+                            <br />
+                            URI: {song.spotifyUri}
+                            <br />
+                            Paused: {song.isPaused ? "Yes" : "No"}
+                          </span>
+                        ) : (
+                          ""
+                        )} */}
                       </p>
                     </div>
                   )}
                 </div>
 
                 {/* Controls */}
-                {isJoined ||
-                  isSubscribed ||
-                  (room.creator_id === accounts[0] && (
-                    <div>
-                      {/* Progress bar */}
-                      <div className="w-full h-2 bg-gray-700 rounded-full mb-4">
-                        <div
-                          className="h-full bg-green-500 rounded-full"
-                          style={{ width: `${progress}%` }}
-                        ></div>
-                      </div>
+                {accounts[0] &&
+                  accounts[0].length > 0 &&
+                  (isJoined ||
+                    isSubscribed ||
+                    (getAddress(room.creator_id) ===
+                      getAddress(accounts[0]) && (
+                      <div>
+                        {/* Progress bar */}
+                        <div className="w-full h-2 bg-gray-700 rounded-full mb-4">
+                          <div
+                            className="h-full bg-green-500 rounded-full"
+                            style={{ width: `${progressPercentage}%` }}
+                          ></div>
+                        </div>
 
-                      {/* Control buttons */}
-                      <div className="flex justify-between items-center">
-                        <div className="flex space-x-4">
-                          <button
-                            onClick={handleTogglePlay}
-                            className="p-3 rounded-full hover:bg-gray-800 transition-colors"
-                          >
-                            {isPaused ? (
+                        {/* Control buttons */}
+                        <div className="flex justify-between items-center">
+                          <div className="flex space-x-4">
+                            <button
+                              onClick={handleTogglePlay}
+                              className="p-3 rounded-full hover:bg-gray-800 transition-colors"
+                            >
+                              {isPaused ? (
+                                <svg
+                                  className="w-6 h-6 text-white"
+                                  viewBox="0 0 24 24"
+                                  fill="currentColor"
+                                >
+                                  <path d="M8 5v14l11-7z" />
+                                </svg>
+                              ) : (
+                                <svg
+                                  className="w-6 h-6 text-white"
+                                  viewBox="0 0 24 24"
+                                  fill="currentColor"
+                                >
+                                  <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                                </svg>
+                              )}
+                            </button>
+                            <button
+                              disabled={isSkippingSong}
+                              onClick={handleSkipForward}
+                              className="p-3 rounded-full hover:bg-gray-800 transition-colors"
+                            >
                               <svg
                                 className="w-6 h-6 text-white"
                                 viewBox="0 0 24 24"
                                 fill="currentColor"
                               >
-                                <path d="M8 5v14l11-7z" />
+                                <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
                               </svg>
-                            ) : (
+                            </button>
+                          </div>
+
+                          <div className="flex space-x-4">
+                            <button
+                              onClick={() => setIsQueueOpen(!isQueueOpen)}
+                              className="p-3 rounded-full hover:bg-gray-800 transition-colors"
+                            >
                               <svg
                                 className="w-6 h-6 text-white"
                                 viewBox="0 0 24 24"
                                 fill="currentColor"
                               >
-                                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                                <path d="M4 10h12v2H4v-2zm0-4h16v2H4V6zm0 8h8v2H4v-2zm10 0h6v2h-6v-2z" />
                               </svg>
-                            )}
-                          </button>
-                          <button
-                            disabled={isSkippingSong}
-                            onClick={handleSkipForward}
-                            className="p-3 rounded-full hover:bg-gray-800 transition-colors"
-                          >
-                            <svg
-                              className="w-6 h-6 text-white"
-                              viewBox="0 0 24 24"
-                              fill="currentColor"
+                            </button>
+                            <button
+                              onClick={addToQueue}
+                              className="p-3 rounded-full hover:bg-gray-800 transition-colors"
                             >
-                              <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
-                            </svg>
-                          </button>
-                        </div>
-
-                        <div className="flex space-x-4">
-                          <button
-                            onClick={() => setIsQueueOpen(!isQueueOpen)}
-                            className="p-3 rounded-full hover:bg-gray-800 transition-colors"
-                          >
-                            <svg
-                              className="w-6 h-6 text-white"
-                              viewBox="0 0 24 24"
-                              fill="currentColor"
-                            >
-                              <path d="M4 10h12v2H4v-2zm0-4h16v2H4V6zm0 8h8v2H4v-2zm10 0h6v2h-6v-2z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={addToQueue}
-                            className="p-3 rounded-full hover:bg-gray-800 transition-colors"
-                          >
-                            <svg
-                              className="w-6 h-6 text-white"
-                              viewBox="0 0 24 24"
-                              fill="currentColor"
-                            >
-                              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-                            </svg>
-                          </button>
+                              <svg
+                                className="w-6 h-6 text-white"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                              >
+                                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                              </svg>
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )))}
               </div>
 
               {/* Queue Drawer (conditionally rendered) */}
@@ -440,37 +621,6 @@ export const RoomView = ({ slug }: { slug: any }) => {
                       roomId={room.id}
                       queue={queue}
                     />
-
-                    {/* {queue && queue.length > 0 ? (
-                      <ul className="space-y-2">
-                        {queue.map((song: any, index: number) => (
-                          <li key={index} className="bg-gray-700 rounded p-2">
-                            <div className="flex items-center">
-                              <img
-                                src={
-                                  song.album?.images[0]?.url ||
-                                  "/placeholder-album.png"
-                                }
-                                alt={song.album?.name || "Album art"}
-                                className="w-10 h-10 rounded mr-2"
-                              />
-                              <div className="overflow-hidden">
-                                <p className="text-white text-sm font-medium truncate">
-                                  {song.name}
-                                </p>
-                                <p className="text-gray-400 text-xs truncate">
-                                  {song.artists
-                                    ?.map((a: any) => a.name)
-                                    .join(", ")}
-                                </p>
-                              </div>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-gray-400">No songs in queue</p>
-                    )} */}
                   </div>
                 </div>
               )}
@@ -478,6 +628,13 @@ export const RoomView = ({ slug }: { slug: any }) => {
           )}
         </div>
       </div>
+      {!isInIframe && (
+        <TrackDebugger
+          currentTrack={currentTrack}
+          song={song}
+          progress={progress}
+        />
+      )}
     </div>
   );
 };

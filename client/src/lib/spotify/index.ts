@@ -1,10 +1,10 @@
-import { _before } from './_before';
-import { getIsSynchronized } from './getIsSynchronized';
-import { getPlaybackStatus } from './getPlaybackStatus';
-import { getSongDuration } from './getSongDuration';
-import { getTargetDevice } from './getTargetDevice';
-import { pause } from './pause';
-import { play } from './play';
+import { _before } from "./_before";
+import { getIsSynchronized } from "./getIsSynchronized";
+import { getPlaybackStatus } from "./getPlaybackStatus";
+import { getSongDuration } from "./getSongDuration";
+import { getTargetDevice } from "./getTargetDevice";
+import { pause } from "./pause";
+import { play } from "./play";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore

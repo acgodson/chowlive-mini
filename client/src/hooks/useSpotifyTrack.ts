@@ -1,133 +1,170 @@
-import { useEffect, useState } from "react";
-import { getDatabase, get, ref } from "firebase/database";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Song from "@/src/lib/models/Song";
-// import { useUpProvider } from "./upProvider";
-import { signInWithCustomToken, getAuth } from "firebase/auth";
 import { useSpotify } from "@/src/services/spotify/spotifyContext";
+import { useAuthListener } from "./useAuthListener";
+
+// Static tracking to prevent multiple component instances from making the same API calls
+const trackCache = new Map();
+const errorTracker = {
+  authErrorDetected: false,
+  lastErrorTime: 0,
+};
 
 const useSpotifyTrack = (song?: Song) => {
   const { spotify } = useSpotify();
-
-  // const { accounts } = useUpProvider();
+  const { spotifyToken, handleSpotifyError, authError, isAuthenticated } =
+    useAuthListener();
   const [spotifyTrack, setSpotifyTrack] =
     useState<SpotifyApi.SingleTrackResponse>();
-  const [previousSongID, setPreviousSongID] = useState("");
-  const [user, setUser] = useState<any>(null);
+  const [previousSongID, setPreviousSongID] = useState<string | null>(null);
+  const songRef = useRef(song);
+  const mountedRef = useRef(true);
+  const loadingRef = useRef(false);
 
-  // Function to get cookie value
-  const getCookie = (name: string): string | null => {
-    if (typeof document === "undefined") return null;
+  // Add debug logging
+  // const logDebug = (message: string, data?: any) => {
+  //   const prefix = "[useSpotifyTrack]";
+  //   if (data) {
+  //     console.log(`${prefix} ${message}`, data);
+  //   } else {
+  //     console.log(`${prefix} ${message}`);
+  //   }
+  // };
 
-    const nameEQ = name + "=";
-    const ca = document.cookie.split(";");
-    for (let i = 0; i < ca.length; i++) {
-      let c = ca[i];
-      while (c.charAt(0) === " ") c = c.substring(1, c.length);
-      if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
-    }
-    return null;
-  };
-
-  // Initialize Firebase auth and get user on mount
+  // Update ref when song changes
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        // Get Firebase token from cookie
-        const firebaseToken = getCookie("firebase_auth_token");
+    songRef.current = song;
+  }, [song]);
 
-        if (firebaseToken) {
-          const auth = getAuth();
-          // Sign in with the token from cookie
-          const userCredential = await signInWithCustomToken(
-            auth,
-            firebaseToken
-          );
-          setUser(userCredential.user);
-        } else {
-          console.log("No Firebase token found in cookies");
-        }
-      } catch (error) {
-        console.error("Error initializing auth from cookie:", error);
-      }
+  // Cleanup
+  useEffect(() => {
+    mountedRef.current = true;
+
+    // If global error state is in effect, immediately set local state to match
+    if (errorTracker.authErrorDetected) {
+      setSpotifyTrack(undefined);
+    }
+
+    return () => {
+      mountedRef.current = false;
     };
-
-    initAuth();
   }, []);
 
-  // Function to fetch Spotify token from Firebase or cookie
-  async function fetchSpotifyToken() {
-    // First try to get token from cookie (faster)
-    const spotifyTokenFromCookie = getCookie("spotify_token");
-    if (spotifyTokenFromCookie) {
-      return spotifyTokenFromCookie;
+  // Update tracking when auth error detected
+  useEffect(() => {
+    if (authError) {
+      errorTracker.authErrorDetected = true;
+      errorTracker.lastErrorTime = Date.now();
+    }
+  }, [authError]);
+
+  // Reset global error tracking when token changes successfully
+  useEffect(() => {
+    if (spotifyToken && isAuthenticated) {
+      errorTracker.authErrorDetected = false;
+    }
+  }, [spotifyToken, isAuthenticated]);
+
+  const loadTrack = useCallback(async () => {
+    // Skip if unmounted or loading or global error tracking says don't try
+    if (
+      !mountedRef.current ||
+      loadingRef.current ||
+      errorTracker.authErrorDetected
+    )
+      return;
+
+    // Don't attempt to load if we have an auth error or no token
+    if (authError || !spotifyToken || !isAuthenticated) {
+      return;
     }
 
-    // If no cookie token and we have a user, try from Firebase
-    if (user?.uid) {
-      try {
-        const rtdb = getDatabase();
-        const tokenSnapshot = await get(
-          ref(rtdb, `spotifyAccessToken/${user.uid}`)
-        );
-        const accessToken = tokenSnapshot.val();
+    // Use the ref to access the latest song value
+    const currentSong = songRef.current;
+    if (!currentSong?.spotifyUri) return;
 
-        // If found, store in cookie for next time
-        if (accessToken) {
-          document.cookie = `spotify_token=${accessToken};path=/;max-age=2592000;samesite=none;secure`;
-        }
-
-        return accessToken;
-      } catch (error) {
-        console.error("Error fetching Spotify token from Firebase:", error);
-        return null;
+    // Check cache first
+    if (trackCache.has(currentSong.id)) {
+      const cachedTrack = trackCache.get(currentSong.id);
+      if (cachedTrack && previousSongID !== currentSong.id) {
+        setPreviousSongID(currentSong.id);
+        setSpotifyTrack(cachedTrack);
+        return;
       }
     }
 
-    return null;
-  }
+    // Skip if already loaded
+    if (previousSongID === currentSong.id && spotifyTrack) return;
 
-  const loadTrack = async () => {
     try {
-      // Only proceed if we have a song with a Spotify URI
-      if (!song || !song.spotifyUri) {
-        return;
-      }
+      loadingRef.current = true;
+      setPreviousSongID(currentSong.id);
 
-      // If this is the same song we already loaded, don't reload it
-      if (previousSongID === song.id && spotifyTrack) {
-        return;
-      }
+      // Set token and extract track ID
+      spotify.setAccessToken(spotifyToken);
+      const trackId = currentSong.spotifyUri.split(":")[2];
 
-      // Get the Spotify token
-      const provider_token = await fetchSpotifyToken();
-      if (!provider_token) {
-        console.log("No Spotify token available");
-        return;
-      }
-
-      // Reset the current track and update the previous song ID
-      setSpotifyTrack(undefined);
-      setPreviousSongID(song.id);
-
-      // Set the access token and fetch the track details
-      spotify.setAccessToken(provider_token);
-
-      // Extract the track ID from the Spotify URI
-      const trackId = song.spotifyUri.split(":")[2];
-
-      // Fetch track details
       const response = await spotify.getTrack(trackId);
-      setSpotifyTrack(response);
-    } catch (error) {
+
+      // Cache the result
+      trackCache.set(currentSong.id, response);
+
+      // Only update state if component still mounted and song still current
+      if (mountedRef.current && songRef.current?.id === currentSong.id) {
+        setSpotifyTrack(response);
+      }
+    } catch (error: any) {
+      // Avoid processing the error if we're already in error state or unmounted
+      if (!mountedRef.current || errorTracker.authErrorDetected) return;
+
       console.error("Error loading Spotify track:", error);
+
+      // Handle auth error just once
+      if (error?.status === 401 && !errorTracker.authErrorDetected) {
+        errorTracker.authErrorDetected = true;
+        errorTracker.lastErrorTime = Date.now();
+        handleSpotifyError(error);
+
+        // Clear local state
+        if (mountedRef.current) {
+          setSpotifyTrack(undefined);
+        }
+      }
+    } finally {
+      if (mountedRef.current) {
+        loadingRef.current = false;
+      }
     }
-  };
+  }, [
+    previousSongID,
+    spotify,
+    spotifyTrack,
+    authError,
+    spotifyToken,
+    isAuthenticated,
+    handleSpotifyError,
+  ]);
 
   useEffect(() => {
-    if (song && (song.id !== previousSongID || !spotifyTrack)) {
+    // Skip if global error state active
+    if (errorTracker.authErrorDetected) {
+      // Only attempt again after 5 seconds
+      const now = Date.now();
+      if (now - errorTracker.lastErrorTime < 5000) return;
+
+      // Reset the global flag if it's been long enough
+      errorTracker.authErrorDetected = false;
+    }
+
+    // If song changed, load the track
+    if (
+      song?.id &&
+      song?.spotifyUri &&
+      (!spotifyTrack || previousSongID !== song?.id)
+    ) {
       loadTrack();
     }
-  }, [user, song, spotify]);
+  }, [song?.id, loadTrack, previousSongID, spotifyTrack]);
 
   return spotifyTrack;
 };

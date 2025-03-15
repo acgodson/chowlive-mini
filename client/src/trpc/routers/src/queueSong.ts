@@ -20,8 +20,10 @@ export const queueSong = baseProcedure
     if (roomId && spotifyUri && duration_ms) {
       const songsRef = db.collection("songs");
       const q = songsRef.where("roomId", "==", roomId);
+      console.log("room id to queue", roomId);
       const querySnapshot = await q.get();
       const hasCurrentSong = !querySnapshot.empty;
+      console.log(hasCurrentSong);
 
       const now = Date.now();
       const song: Partial<Song> = {

@@ -9,12 +9,6 @@ import { trpc } from "@/src/trpc/client";
 import LuksoRpc from "@/src/services/lukso";
 import { useUpProvider } from "@/src/services/lukso/upProvider";
 
-
-interface HomeProps {
-  onJoinRoom: (roomId: string) => void;
-  //TODO: add other props
-}
-
 interface Room {
   id: string;
   name: string;
@@ -24,7 +18,7 @@ interface Room {
   slug: string;
 }
 
-export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
+export const Home: React.FC = () => {
   const router = useRouter();
   const { accounts, provider } = useUpProvider();
   const [roomIdInput, setRoomIdInput] = useState("");
@@ -80,7 +74,8 @@ export const Home: React.FC<HomeProps> = ({ onJoinRoom }) => {
     const idToUse =
       roomIdToJoin || (showRoomIdFromUrl ? roomIdFromUrl : roomIdInput.trim());
     if (idToUse) {
-      onJoinRoom(idToUse);
+      router.push(`/rooms/${idToUse}`);
+      // onJoinRoom(idToUse);
     }
   };
 

@@ -71,9 +71,24 @@ const useMonitorRoom = (slug?: string | number): MonitorRm => {
 
     fetchRoom();
 
+    // Determine whether slug is an nftId or a regular slug
+    let roomQuery;
+    if (typeof slug === "string") {
+      const numSlug = Number(slug);
+      roomQuery = !isNaN(numSlug)
+        ? numSlug > Number.MAX_SAFE_INTEGER
+          ? query(collection(db, "rooms"), where("nftId", "==", BigInt(slug)))
+          : query(collection(db, "rooms"), where("nftId", "==", numSlug))
+        : query(collection(db, "rooms"), where("slug", "==", slug));
+    } else if (typeof slug === "number" || typeof slug === "bigint") {
+      roomQuery = query(collection(db, "rooms"), where("nftId", "==", slug));
+    } else {
+      roomQuery = query(collection(db, "rooms"), where("slug", "==", slug));
+    }
+
     // Set up real-time listener
     const unsubscribe = onSnapshot(
-      query(collection(db, "rooms"), where("slug", "==", slug)),
+      roomQuery,
       (snapshot) => {
         if (!snapshot.empty) {
           const roomData = snapshot.docs[0].data() as Room;
@@ -94,15 +109,41 @@ const useMonitorRoom = (slug?: string | number): MonitorRm => {
 
   useEffect(() => {
     const checkSubscription = async () => {
-      if (!room.nftId || !accounts[0]) return;
+      if (!slug || !accounts[0]) return;
 
       const luksoRpc = new LuksoRpc({ accounts });
-      const subscribed = await luksoRpc.isSubscribedToRoom(room.nftId);
-      setIsSubscribed(subscribed);
+
+      let nftId;
+      if (typeof slug === "string") {
+        const numSlug = Number(slug);
+        nftId = !isNaN(numSlug)
+          ? numSlug > Number.MAX_SAFE_INTEGER
+            ? BigInt(slug)
+            : numSlug
+          : null;
+      } else if (typeof slug === "number" || typeof slug === "bigint") {
+        nftId = slug;
+      }
+
+      if (nftId) {
+        const subscribed = await luksoRpc.isSubscribedToRoom(Number(nftId));
+        setIsSubscribed(subscribed);
+      } else {
+        // Handle slug-based subscription logic if applicable
+        const roomsRef = collection(db, "rooms");
+        const q = query(roomsRef, where("slug", "==", slug));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          const roomData = querySnapshot.docs[0].data() as Room;
+          const subscribed = await luksoRpc.isSubscribedToRoom(roomData.nftId);
+          setIsSubscribed(subscribed);
+        }
+      }
     };
 
     checkSubscription();
-  }, [room.nftId, accounts]);
+  }, [db, slug, accounts]);
 
   return { room, isLoadingRoom, isSubscribed };
 };

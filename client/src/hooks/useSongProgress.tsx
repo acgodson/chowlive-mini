@@ -1,44 +1,106 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Song from "@/src/lib/models/Song";
-
-// The amount of time for realtime playback to lag behind the server queue time.
-// Useful for not cutting off the beginnings of songs.
-const PROGRESS_DELAY = 0;
+import { calculateProgress } from "@/src/lib/playback/utils/calculateProgress";
 
 const useSongProgress = (song?: Song) => {
-  const [progress, setProgress] = useState(-1);
+  const [progress, setProgress] = useState(0);
+  const lastProgressRef = useRef(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const songIdRef = useRef<string | null>(null);
 
-  const updatedAtMS = useMemo(() => {
-    return song ? Date.parse(song.updatedAt.toString()) : 0;
-  }, [song]);
-
+  // Store last known progress when song changes or component unmounts
   useEffect(() => {
-    const calculateProgress = (s: Song) => {
-      const x = new Date();
-
-      // Get current time
-      let now = x.valueOf() - PROGRESS_DELAY; // - x.getTimezoneOffset() * 60 * 1000;
-      if (now - updatedAtMS > 10000000)
-        now -= x.getTimezoneOffset() * 60 * 1000;
-      if (now - updatedAtMS < -10000000)
-        now += x.getTimezoneOffset() * 60 * 1000;
-
-      const newProgress = now - updatedAtMS + s.progress;
-
-      if (s.isPaused) setProgress(s.progress);
-      else setProgress(newProgress);
+    // Cleanup previous interval when song changes or component unmounts
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
     };
+  }, []);
 
+  // Handle song changes and progress tracking
+  useEffect(() => {
     if (!song) {
-      setProgress(-1);
+      setProgress(0);
       return;
     }
-    const interval = setInterval(() => calculateProgress(song), 1000);
+
+    // If song ID changed, reset progress tracking
+    if (songIdRef.current !== song.id) {
+      songIdRef.current = song.id;
+
+      // Initialize with current progress from song
+      const initialProgress = calculateProgress(song);
+      setProgress(initialProgress);
+      lastProgressRef.current = initialProgress;
+
+      console.log(
+        `[useSongProgress] New song detected (${song.id}), initial progress: ${initialProgress}ms`
+      );
+    }
+
+    // If song is paused, we should:
+    // 1. Clear any running interval
+    // 2. Keep the last known progress value
+    if (song.isPaused) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+
+      // Important: We do NOT reset progress to 0 here
+      // Instead, use the stored progress from the song
+      const pausedProgress = calculateProgress(song);
+
+      // Only update if the progress has changed significantly
+      if (Math.abs(pausedProgress - lastProgressRef.current) > 1000) {
+        console.log(
+          `[useSongProgress] Song paused, setting progress to: ${pausedProgress}ms`
+        );
+        setProgress(pausedProgress);
+        lastProgressRef.current = pausedProgress;
+      } else {
+        console.log(
+          `[useSongProgress] Song paused, maintaining progress at: ${lastProgressRef.current}ms`
+        );
+      }
+    }
+    // If song is playing, start interval to update progress
+    else {
+      // Clear any existing interval first
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+
+      // Get initial progress
+      const initialProgress = calculateProgress(song);
+      setProgress(initialProgress);
+      lastProgressRef.current = initialProgress;
+
+      console.log(
+        `[useSongProgress] Song playing, starting progress tracking from: ${initialProgress}ms`
+      );
+
+      // Set up interval to update progress while playing
+      intervalRef.current = setInterval(() => {
+        const newProgress = calculateProgress(song);
+
+        // Only update state if progress has changed significantly
+        if (Math.abs(newProgress - lastProgressRef.current) > 500) {
+          setProgress(newProgress);
+          lastProgressRef.current = newProgress;
+        }
+      }, 1000);
+    }
 
     return () => {
-      if (interval) clearInterval(interval);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
     };
-  }, [song, progress, updatedAtMS]);
+  }, [song, song?.isPaused]);
 
   return progress;
 };

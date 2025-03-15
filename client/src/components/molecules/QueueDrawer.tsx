@@ -5,7 +5,6 @@ import { useSpotify } from "@/src/services/spotify/spotifyContext";
 import { useAtom } from "jotai";
 import { roomAtom } from "@/src/state/roomAtom";
 import { signInWithCustomToken, getAuth } from "firebase/auth";
-// import useSpotifyTrack from "../useSpotifyTrack";
 import QueueContent from "./QueueContent";
 
 const QueueDrawer = ({ isOpen, onClose, queue }: any) => {
@@ -34,19 +33,24 @@ const QueueDrawer = ({ isOpen, onClose, queue }: any) => {
     return null;
   };
 
-  // Initialize Firebase auth - same as in your hook
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const firebaseToken = getCookie("firebase_auth_token");
-        if (firebaseToken) {
-          const auth = getAuth();
-          const userCredential = await signInWithCustomToken(
-            auth,
-            firebaseToken
-          );
-          setUser(userCredential.user);
-        }
+        const auth = getAuth();
+        auth.onAuthStateChanged((user) => {
+          if (user) {
+            setUser(user);
+          } else {
+            const firebaseToken = getCookie("firebase_auth_token");
+            if (firebaseToken) {
+              signInWithCustomToken(auth, firebaseToken).then(
+                (userCredential) => {
+                  setUser(userCredential.user);
+                }
+              );
+            }
+          }
+        });
       } catch (error) {
         console.error("Error initializing auth from cookie:", error);
       }
@@ -54,7 +58,6 @@ const QueueDrawer = ({ isOpen, onClose, queue }: any) => {
 
     initAuth();
   }, []);
-
   // Function to fetch Spotify token - same as in your hook
   async function fetchSpotifyToken() {
     // First try to get token from cookie (faster)

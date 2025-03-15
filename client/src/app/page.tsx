@@ -7,7 +7,7 @@ export default function HomeApp() {
   return (
     <>
       <ConnectButton />
-      <Home onJoinRoom={() => {}} />
+      <Home />
     </>
   );
 }

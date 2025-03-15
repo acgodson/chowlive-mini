@@ -12,7 +12,6 @@ import { skip } from './skip';
 export type PlaybackProps = {
   spotify: SpotifyAPI;
   spotifyAccessToken: string;
-
   song?: Song;
 };
 

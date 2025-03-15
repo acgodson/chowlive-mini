@@ -34,7 +34,7 @@ import { TRPCProvider } from "@/src/trpc/client";
 import { SpotifyWebPlaybackProvider as SpotifyWebPlayback } from "../spotify/SpotifyWebPlayback";
 import { SpotifyProvider } from "../spotify/spotifyContext";
 import LuksoRpc from ".";
-
+import { AuthProvider } from "@/src/hooks/useAuthListener";
 
 interface UpProviderContext {
   provider: UPClientProvider | null;
@@ -159,9 +159,12 @@ export function UpProvider({ children }: UpProviderProps) {
   const connectWallet = async () => {
     if (!provider) return;
     console.log(provider);
-    const extension = window.lukso || window.ethereum;    
+    const extension = window.lukso || window.ethereum;
     if (!extension) {
-      window.open("https://chromewebstore.google.com/detail/universal-profiles/abpickdkkbnbcoepogfhkhennhfhehfn", "_blank");
+      window.open(
+        "https://chromewebstore.google.com/detail/universal-profiles/abpickdkkbnbcoepogfhkhennhfhehfn",
+        "_blank"
+      );
       return;
     }
     const rpc = new LuksoRpc(provider);
@@ -201,13 +204,15 @@ export function UpProvider({ children }: UpProviderProps) {
   return (
     <UpContext.Provider value={data}>
       <TRPCProvider>
-        <SpotifyWebPlayback>
-          <SpotifyProvider>
-            <div className="min-h-screen flex items-center justify-center">
-              {children}
-            </div>
-          </SpotifyProvider>
-        </SpotifyWebPlayback>
+        <AuthProvider>
+          <SpotifyWebPlayback>
+            <SpotifyProvider>
+              <div className="min-h-screen flex items-center justify-center">
+                {children}
+              </div>
+            </SpotifyProvider>
+          </SpotifyWebPlayback>
+        </AuthProvider>
       </TRPCProvider>
     </UpContext.Provider>
   );

@@ -2,6 +2,7 @@ import Song from "@/src/lib/models/Song";
 import { z } from "zod";
 import { baseProcedure } from "../../init";
 import admin from "@/src/configs/firebase-admin-config";
+import { calculateProgress } from "@/src/lib/playback/utils/calculateProgress";
 
 const db = admin.firestore();
 
@@ -40,7 +41,9 @@ export const updatePlayback = baseProcedure
 
     // CALCULATE PROGRESS
     const now = Date.now();
-    const progress = now - song.updatedAt + song.progress;
+    const progress = calculateProgress(song, now);
+
+    const progressPercentage = track?.duration_ms ? (progress / track.duration_ms) * 100 : 0;
 
     // SONG SKIPPING
     if (shouldSkip) {
@@ -49,7 +52,7 @@ export const updatePlayback = baseProcedure
       }
 
       // If the client thinks the song is over but the server doesn't, don't skip
-      if (isSkipAtEnd && track.duration_ms > progress) {
+      if (isSkipAtEnd && track.duration_ms > progressPercentage) {
         return;
       }
 
@@ -79,7 +82,7 @@ export const updatePlayback = baseProcedure
         if (isPaused) {
           await songRef.update({
             isPaused,
-            progress,
+            progress: progressPercentage,
             updatedAt: new Date(),
           });
         } else {

@@ -16,6 +16,7 @@ export const getIsSynchronized = async (
 ): Promise<boolean> => {
   const service = PlaybackAPI.getActiveService(props);
 
+  if (!props.song) return true;
   const progress = calculateProgress(props.song);
   if (!progress) return true;
 

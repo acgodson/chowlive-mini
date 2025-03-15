@@ -7,12 +7,7 @@ import React, {
   useState,
   PropsWithChildren,
 } from "react";
-import { get, ref, getDatabase } from "firebase/database";
-import { onAuthStateChanged } from "firebase/auth";
-import {
-  // getFirebaseApp,
-  getFirebaseAuth,
-} from "../../configs/firebase-app-config";
+import { useAuthListener } from "@/src/hooks/useAuthListener";
 
 const SPOTIFY_PLAYER_SCRIPT_SRC = "https://sdk.scdn.co/spotify-player.js";
 
@@ -41,24 +36,10 @@ export const SpotifyWebPlaybackProvider: React.FC<PropsWithChildren> = ({
   children,
 }) => {
   const [isWebPlaybackReady, setIsWebPlaybackReady] = useState(false);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [spotifyPlayer, setSpotifyPlayer] = useState<any | null>(null);
-  const [user, setUser] = useState<any | null>(null);
-
-  // Function to get cookie value
-  const getCookie = (name: string): string | null => {
-    if (typeof document === "undefined") return null;
-
-    const nameEQ = name + "=";
-    const ca = document.cookie.split(";");
-    for (let i = 0; i < ca.length; i++) {
-      let c = ca[i];
-      while (c.charAt(0) === " ") c = c.substring(1, c.length);
-      if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
-    }
-    return null;
-  };
-
+  const authListener = useAuthListener();
+  const { spotifyToken: accessToken, authError } = authListener;
+  
   // Add the Spotify Web Playback SDK script to the DOM
   useEffect(() => {
     const existingScript = document.querySelector(
@@ -76,74 +57,24 @@ export const SpotifyWebPlaybackProvider: React.FC<PropsWithChildren> = ({
       setIsWebPlaybackReady(true);
     };
 
-    return () => {
-      // Cleanup if needed
-    };
+    return () => {};
   }, []);
 
-  // Listen for Firebase auth state changes
+  // Disconnect player when auth error occurs
   useEffect(() => {
-    // const app = getFirebaseApp();
-    const auth = getFirebaseAuth();
-
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // Fetch access token from both cookie and Firebase
-  useEffect(() => {
-    const fetchToken = async () => {
-      // First check cookie
-      const spotifyTokenFromCookie = getCookie("spotify_token");
-      if (spotifyTokenFromCookie) {
-        console.log("Found Spotify token in cookie");
-        setAccessToken(spotifyTokenFromCookie);
-        return;
-      }
-
-      // If not in cookie and user is logged in, try Firebase
-      if (user) {
-        try {
-          const rtdb = getDatabase();
-          const tokenSnapshot = await get(
-            ref(rtdb, `spotifyAccessToken/${user.uid}`)
-          );
-
-          const fetchedAccessToken = tokenSnapshot.val();
-          if (fetchedAccessToken) {
-            console.log("Found Spotify token in Firebase");
-            setAccessToken(fetchedAccessToken);
-
-            // Optionally store in cookie for next time
-            document.cookie = `spotify_token=${fetchedAccessToken};path=/;max-age=2592000;samesite=none;secure`;
-          }
-        } catch (error) {
-          console.error("Error fetching token from Firebase:", error);
-        }
-      }
-    };
-
-    fetchToken();
-
-    // Set up an interval to check for token changes
-    const tokenCheckInterval = setInterval(() => {
-      const currentToken = getCookie("spotify_token");
-      if (currentToken && currentToken !== accessToken) {
-        setAccessToken(currentToken);
-      }
-    }, 10000); // Check every 10 seconds
-
-    return () => clearInterval(tokenCheckInterval);
-  }, [user, accessToken]);
+    if (authError && spotifyPlayer) {
+      console.log("Auth error detected, disconnecting Spotify player");
+      spotifyPlayer.disconnect();
+      setSpotifyPlayer(null);
+    }
+  }, [authError, spotifyPlayer]);
 
   // Create the Spotify Web Player
   useEffect(() => {
-    if (!isWebPlaybackReady || !accessToken || spotifyPlayer) return;
+    if (!isWebPlaybackReady || !accessToken || spotifyPlayer || authError)
+      return;
 
-    console.log("Creating Spotify Web Player...");
+    console.log("Creating Spotify Web Player with token");
 
     // @ts-expect-error
     const player = new Spotify.Player({
@@ -162,8 +93,14 @@ export const SpotifyWebPlaybackProvider: React.FC<PropsWithChildren> = ({
     );
     player.addListener(
       "authentication_error",
-      ({ message }: { message: string }) =>
-        console.error("Authentication error:", message)
+      ({ message }: { message: string }) => {
+        console.error("Authentication error:", message);
+        // Handle auth errors through the auth provider
+        if (message.includes("authentication failed")) {
+          // Force clearance of cookies and tokens
+          authListener.handleSpotifyError({ status: 401 });
+        }
+      }
     );
     player.addListener("account_error", ({ message }: { message: string }) =>
       console.error("Account error:", message)
@@ -201,7 +138,7 @@ export const SpotifyWebPlaybackProvider: React.FC<PropsWithChildren> = ({
     return () => {
       player.disconnect();
     };
-  }, [isWebPlaybackReady, accessToken, spotifyPlayer]);
+  }, [isWebPlaybackReady, accessToken, spotifyPlayer, authError]);
 
   const value = {
     isWebPlaybackReady,
