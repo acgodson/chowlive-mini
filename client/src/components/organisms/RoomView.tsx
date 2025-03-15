@@ -29,7 +29,6 @@ export const RoomView = ({ slug }: { slug: any }) => {
   const [isInIframe, setIsInIframe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isJoined, setIsJoined] = useState(false);
   const [changeToIsPaused, setChangeToIsPaused] = useState(true);
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [isSkippingSong, setIsSkippingSong] = useState(false);
@@ -520,7 +519,7 @@ export const RoomView = ({ slug }: { slug: any }) => {
                 {/* Controls */}
                 {accounts[0] &&
                   accounts[0].length > 0 &&
-                  (isJoined ||
+                  (
                     isSubscribed ||
                     (getAddress(room.creator_id) ===
                       getAddress(accounts[0]) && (
