@@ -202,13 +202,11 @@ export default class LuksoRpc {
               data: log.data,
               topics: log.topics,
             });
-
-            console.log(decodedLog);
-
             if (decodedLog.eventName === "RoomCreated") {
               console.log("Found RoomCreated event:", decodedLog);
-              // The roomId is the first indexed parameter (args[0])
-              roomId = decodedLog.args?.[0] as bigint;
+              const args : any = decodedLog.args  // {}
+              roomId = args.roomId as bigint;
+              console.log("the roomId", roomId);
               break;
             }
           }
@@ -216,25 +214,6 @@ export default class LuksoRpc {
           // Continue to next log if this one can't be decoded
           console.log("Failed to decode log:", error);
           continue;
-        }
-      }
-
-      if (!roomId) {
-        console.log(
-          "Couldn't find roomId in events, trying to read lastRoomID from contract"
-        );
-        try {
-          roomId = (await this.publicClient.readContract({
-            address: contractAddress,
-            abi: chowliveRoomABI.abi,
-            functionName: "lastRoomID",
-            args: [],
-          })) as bigint;
-
-          console.log("Read lastRoomID from contract:", roomId);
-        } catch (lastIdError) {
-          console.error("Error reading lastRoomID:", lastIdError);
-          throw new Error("Failed to get room ID from event logs or contract");
         }
       }
 
@@ -300,7 +279,6 @@ export default class LuksoRpc {
 
     for (const log of receipt.logs) {
       try {
-        // If the log is from our contract address
         if (log.address.toLowerCase() === contractAddress.toLowerCase()) {
           const decodedLog = decodeEventLog({
             abi: chowliveRoomABI.abi,
@@ -309,8 +287,10 @@ export default class LuksoRpc {
           });
           console.log(decodedLog);
           if (decodedLog.eventName === "SubscriptionUpdated") {
-            console.log("Found RoomCreated event:", decodedLog);
-            expirationTime = decodedLog.args?.[2] as bigint;
+            console.log("Found SubscriptionUpdated event:", decodedLog);
+            const args : any = decodedLog.args 
+            expirationTime = args.expirationTime as bigint;
+            console.log("the expiration time", expirationTime);
             break;
           }
         }
