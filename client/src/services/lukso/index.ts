@@ -276,7 +276,7 @@ export default class LuksoRpc {
     if (!subscripitionFee) {
       throw new Error("unable to get subscription fee at this time");
     }
-    console.log("Room subscription fee:", subscripitionFee[2]);
+    console.log("Room subscription fee:", subscripitionFee);
 
     // Transaction hash from writing to the contract
     const hash = await this.walletClient.writeContract({
