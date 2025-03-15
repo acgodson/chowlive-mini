@@ -27,7 +27,7 @@ export const RoomView = ({ slug }: { slug: any }) => {
     connect,
   } = useSpotifyAuth();
   const [isInIframe, setIsInIframe] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isJoined, setIsJoined] = useState(false);
   const [changeToIsPaused, setChangeToIsPaused] = useState(true);
@@ -138,7 +138,6 @@ export const RoomView = ({ slug }: { slug: any }) => {
 
       const response = await luksoRpc.joinRoom(room.nftId);
       console.log("subscription fee", response.fee);
-      setIsJoined(true);
       setIsLoading(false);
     } catch (err) {
       setError("Failed to join room");
