@@ -19,7 +19,6 @@ export default function useHandlePlayback(
   const progressRef = useRef(0);
   const progress = useSongProgress(song);
   const lastSongIdRef = useRef<string | null>(null);
-  // const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     progressRef.current = progress;
@@ -53,7 +52,6 @@ export default function useHandlePlayback(
             // console.log("Forcing play on song change:", song.spotifyUri);
             await PlaybackAPI.play(props);
           }
-          // setIsInitialized(true);
         } catch (error) {
           console.error("Error starting playback for new song:", error);
         }
@@ -188,9 +186,7 @@ export default function useHandlePlayback(
 
   useEffect(() => {
     return () => {
-      // Perform any cleanup needed when component unmounts
       lastSongIdRef.current = null;
-      // setIsInitialized(false);
     };
   }, []);
 
