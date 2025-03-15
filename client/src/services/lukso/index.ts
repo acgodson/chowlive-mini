@@ -204,7 +204,7 @@ export default class LuksoRpc {
             });
             if (decodedLog.eventName === "RoomCreated") {
               console.log("Found RoomCreated event:", decodedLog);
-              const args : any = decodedLog.args  // {}
+              const args: any = decodedLog.args; // {}
               roomId = args.roomId as bigint;
               console.log("the roomId", roomId);
               break;
@@ -288,8 +288,8 @@ export default class LuksoRpc {
           console.log(decodedLog);
           if (decodedLog.eventName === "SubscriptionUpdated") {
             console.log("Found SubscriptionUpdated event:", decodedLog);
-            const args : any = decodedLog.args 
-            expirationTime = args.expirationTime as bigint;
+            const args: any = decodedLog.args;
+            expirationTime = args.expiration as bigint;
             console.log("the expiration time", expirationTime);
             break;
           }
@@ -300,7 +300,7 @@ export default class LuksoRpc {
       }
     }
     return {
-      fee: res.subscripitionFee,
+      fee: Number(res.subscriptionFee),
       expirationTime,
     };
   }

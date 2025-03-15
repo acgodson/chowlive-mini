@@ -127,6 +127,7 @@ const useMonitorRoom = (slug?: string | number): MonitorRm => {
 
       if (nftId) {
         const subscribed = await luksoRpc.isSubscribedToRoom(Number(nftId));
+        console.log("subscription status", subscribed);
         setIsSubscribed(subscribed);
       } else {
         // Handle slug-based subscription logic if applicable
