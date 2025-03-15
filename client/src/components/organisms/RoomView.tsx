@@ -15,11 +15,12 @@ import { abbreviateAddress } from "@/src/configs/env";
 import { FiClipboard, FiCheck } from "react-icons/fi";
 import { getAddress } from "viem";
 import { useRouter } from "next/navigation";
+import LuksoRpc from "@/src/services/lukso";
 
 export const RoomView = ({ slug }: { slug: any }) => {
   const roomId = slug;
   const router = useRouter();
-  const { accounts } = useUpProvider();
+  const { accounts, provider } = useUpProvider();
   const {
     isAuthenticated,
     isLoading: isLoadingSpotify,
@@ -128,6 +129,15 @@ export const RoomView = ({ slug }: { slug: any }) => {
 
     try {
       setIsLoading(true);
+      const luksoRpc = new LuksoRpc(provider);
+
+      console.log("Joining room with params:", {
+        name: room.name,
+        nftID: room.nftId,
+      });
+
+      const response = await luksoRpc.joinRoom(room.nftId);
+      console.log("subscription fee", response.fee);
       setIsJoined(true);
       setIsLoading(false);
     } catch (err) {

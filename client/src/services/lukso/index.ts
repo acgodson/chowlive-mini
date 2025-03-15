@@ -39,8 +39,7 @@ export default class LuksoRpc {
   private provider: any;
   private publicClient: PublicClient;
   private walletClient: WalletClient;
-  private _isInitialized: boolean = false;
-
+ 
   constructor(provider: any) {
     this.provider = provider;
     this.publicClient = createPublicClient({
@@ -51,7 +50,6 @@ export default class LuksoRpc {
       chain: luksoMainnet,
       transport: custom(provider),
     });
-    this._isInitialized = true;
   }
 
   async connectWallet(provider: any): Promise<string[] | any> {
@@ -252,6 +250,79 @@ export default class LuksoRpc {
       console.error("Error creating room:", error);
       throw error;
     }
+  }
+
+  async joinRoom(
+    nftId: number
+  ): Promise<{ fee: number; expirationTime: bigint | undefined }> {
+    const accounts = await this.getAccounts();
+    if (!accounts || accounts.length === 0) {
+      throw new Error("No accounts available");
+    }
+
+    const contractAddress = process.env
+      .NEXT_PUBLIC_CHOWLIVE_ROOM as `0x${string}`;
+    if (!contractAddress) {
+      throw new Error("Contract address not found");
+    }
+    const subscripitionFee: any = await this.publicClient.readContract({
+      address: contractAddress,
+      abi: chowliveRoomABI.abi,
+      functionName: "getRoomDetails",
+      account: this.provider.accounts[0],
+      args: [BigInt(nftId)],
+    });
+
+    if (!subscripitionFee) {
+      throw new Error("unable to get subscription fee at this time");
+    }
+    console.log("Room subscription fee:", subscripitionFee[2]);
+
+    // Transaction hash from writing to the contract
+    const hash = await this.walletClient.writeContract({
+      address: contractAddress,
+      abi: chowliveRoomABI.abi,
+      functionName: "subscribeToRoom",
+      args: [BigInt(nftId)],
+      value: subscripitionFee[2] as any,
+      chain: luksoMainnet,
+      account: accounts[0] as `0x${string}`,
+    });
+
+    console.log("Transaction hash:", hash);
+
+    const receipt = await this.publicClient.waitForTransactionReceipt({
+      hash,
+    });
+    console.log("receipt", receipt);
+    console.log("Receipt logs:", receipt.logs);
+    let expirationTime;
+
+    for (const log of receipt.logs) {
+      try {
+        // If the log is from our contract address
+        if (log.address.toLowerCase() === contractAddress.toLowerCase()) {
+          const decodedLog = decodeEventLog({
+            abi: chowliveRoomABI.abi,
+            data: log.data,
+            topics: log.topics,
+          });
+          console.log(decodedLog);
+          if (decodedLog.eventName === "SubscriptionUpdated") {
+            console.log("Found RoomCreated event:", decodedLog);
+            expirationTime = decodedLog.args?.[2] as bigint;
+            break;
+          }
+        }
+      } catch (error) {
+        console.log("Failed to decode log:", error);
+        continue;
+      }
+    }
+    return {
+      fee: subscripitionFee,
+      expirationTime,
+    };
   }
 
   async subscribeToRoom(

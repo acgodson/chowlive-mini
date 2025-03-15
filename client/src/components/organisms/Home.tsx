@@ -75,7 +75,6 @@ export const Home: React.FC = () => {
       roomIdToJoin || (showRoomIdFromUrl ? roomIdFromUrl : roomIdInput.trim());
     if (idToUse) {
       router.push(`/rooms/${idToUse}`);
-      // onJoinRoom(idToUse);
     }
   };
 
