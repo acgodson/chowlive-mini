@@ -265,7 +265,7 @@ export default class LuksoRpc {
     if (!contractAddress) {
       throw new Error("Contract address not found");
     }
-    const subscripitionFee: any = await this.publicClient.readContract({
+    const res: any = await this.publicClient.readContract({
       address: contractAddress,
       abi: chowliveRoomABI.abi,
       functionName: "getRoomDetails",
@@ -273,10 +273,10 @@ export default class LuksoRpc {
       args: [BigInt(nftId)],
     });
 
-    if (!subscripitionFee) {
+    if (!res) {
       throw new Error("unable to get subscription fee at this time");
     }
-    console.log("Room subscription fee:", subscripitionFee);
+    console.log("Room subscription fee:", res.subscriptionFee);
 
     // Transaction hash from writing to the contract
     const hash = await this.walletClient.writeContract({
@@ -284,7 +284,7 @@ export default class LuksoRpc {
       abi: chowliveRoomABI.abi,
       functionName: "subscribeToRoom",
       args: [BigInt(nftId)],
-      value: subscripitionFee[2] as any,
+      value: res.subscriptionFee as any,
       chain: luksoMainnet,
       account: accounts[0] as `0x${string}`,
     });
