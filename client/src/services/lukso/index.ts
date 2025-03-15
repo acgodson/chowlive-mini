@@ -39,7 +39,7 @@ export default class LuksoRpc {
   private provider: any;
   private publicClient: PublicClient;
   private walletClient: WalletClient;
- 
+
   constructor(provider: any) {
     this.provider = provider;
     this.publicClient = createPublicClient({
@@ -284,7 +284,7 @@ export default class LuksoRpc {
       abi: chowliveRoomABI.abi,
       functionName: "subscribeToRoom",
       args: [BigInt(nftId)],
-      value: res.subscriptionFee as any,
+      value: res.subscriptionFee ?? (0 as any),
       chain: luksoMainnet,
       account: accounts[0] as `0x${string}`,
     });
@@ -320,7 +320,7 @@ export default class LuksoRpc {
       }
     }
     return {
-      fee: subscripitionFee,
+      fee: res.subscripitionFee,
       expirationTime,
     };
   }
